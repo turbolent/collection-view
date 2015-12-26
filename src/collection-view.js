@@ -14,12 +14,12 @@ export default class CollectionView {
   static DEFAULT_ANIMATION_DURATION = 400
   static DEFAULT_RESIZE_THROTTLE = 1000
 
-  constructor(scrollElement, layout, delegate) {
-    this.scrollElement = scrollElement
-    scrollElement.classList.add(style.content)
+  constructor(content, layout, delegate) {
+    this.content = content
+    content.classList.add(style.content)
     this.layout = layout
     this.delegate = delegate
-    this.container = scrollElement.parentElement
+    this.container = content.parentElement
     this.container.classList.add(style.container)
     this.scrollPosition = [0, 0]
     this.containerSize = [0, 0]
@@ -58,11 +58,27 @@ export default class CollectionView {
     // })
 
     this.updateCurrentIndices()
+    this.installed = true
+  }
+
+  uninstall() {
+    this.installed = false
+
+    this.content.classList.remove(style.content)
+    this.content.removeAttribute('style')
+
+    this.container.classList.remove(style.container)
+    this.container.removeEventListener('scroll', this.onScroll, false)
+
+    window.removeEventListener('resize', this.onResize, false)
+
+    this.forEachVisibleElement(element =>
+      element.parentElement.removeChild(element))
   }
 
   getContainerSize() {
     return [this.container.clientWidth,
-             this.container.clientHeight]
+            this.container.clientHeight]
   }
 
   updateContainerSize(layout) {
@@ -77,8 +93,8 @@ export default class CollectionView {
   updateContentSize(layout) {
     this.contentSize = layout.getContentSize(this.count, this.getContainerSize())
     const [contentWidth, contentHeight] = this.contentSize
-    this.scrollElement.style.minWidth = contentWidth + 'px'
-    this.scrollElement.style.minHeight = contentHeight + 'px'
+    this.content.style.minWidth = contentWidth + 'px'
+    this.content.style.minHeight = contentHeight + 'px'
   }
 
   getScrollPosition() {
@@ -180,7 +196,7 @@ export default class CollectionView {
   createAndAddElement() {
     const element = document.createElement('div')
     element.classList.add(style.element)
-    this.scrollElement.appendChild(element)
+    this.content.appendChild(element)
     return element
   }
 
@@ -268,7 +284,8 @@ export default class CollectionView {
 
       this.layout = newLayout
 
-      this.container.addEventListener('scroll', this.onScroll, false)
+      if (this.installed)
+        this.container.addEventListener('scroll', this.onScroll, false)
 
       setTimeout(() => {
         if (completion)
@@ -461,7 +478,8 @@ export default class CollectionView {
 
       this.repositionVisibleElements(this.layout)
 
-      this.container.addEventListener('scroll', this.onScroll, false)
+      if (this.installed)
+        this.container.addEventListener('scroll', this.onScroll, false)
 
       setTimeout(() => {
         if (countDifference < 0)
