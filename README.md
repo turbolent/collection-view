@@ -108,7 +108,7 @@ to the target collection [1, 15, 16, 3, 6, 8, 4, 10, 11]:
 * The items at indices [1, 2] in the target collection are new in the target collection
   (**added**):
 
-  [1, **15, **16**, 3, 6, 8, 4, 10, 11]
+  [1, **15**, **16**, 3, 6, 8, 4, 10, 11]
 
 * The item at index 3 in the original collection is now at index 6 in the target collection
   (**moved**):
