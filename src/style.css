@@ -1,0 +1,28 @@
+.container {
+    overflow: scroll;
+    -webkit-overflow-scrolling: touch;
+}
+
+.content {
+    min-height: 100%;
+    position: relative;
+    overflow: hidden;
+    transform: translate3d(0, 0, 0);
+}
+
+.element {
+    display: block;
+    position: absolute;
+    opacity: 1;
+    transition-duration: 400ms;
+    transition-property: width, height, opacity;
+}
+
+:global(.repositioning) {
+    transition-property: width, height, opacity, transform;
+}
+
+:global(.appearing),
+:global(.disappearing) {
+    opacity: 0;
+}

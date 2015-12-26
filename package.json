@@ -1,0 +1,32 @@
+{
+  "name": "collection-view",
+  "version": "0.1.4",
+  "license": "MIT",
+  "author": "Bastian Müller <bastian@turbolent.com>",
+  "main": "./dist/index.js",
+  "files": [
+    "README.md",
+    "dist/",
+    "src/",
+    "LICENSE",
+    "examples/"
+  ],
+  "scripts": {
+    "build": "webpack",
+    "prepublish": "npm run build"
+  },
+  "dependencies": {
+    "bezier-easing": "1.1.x",
+    "lodash.throttle": "3.0.x"
+  },
+  "devDependencies": {
+    "babel-core": "5.8.x",
+    "babel-loader": "5.3.x",
+    "babel-runtime": "5.8.x",
+    "babel-eslint": "4.1.x",
+    "webpack": "1.12.x",
+    "style-loader": "0.13.x",
+    "css-loader": "0.21.x",
+    "eslint-loader": "1.1.x"
+  }
+}

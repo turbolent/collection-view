@@ -1,0 +1,4 @@
+:global(#wrapper) {
+    border: 1px solid #444;
+    top: 10%;
+}
