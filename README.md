@@ -103,20 +103,19 @@ to the target collection [1, 15, 16, 3, 6, 8, 4, 10, 11]:
 * The items at indices [1, 4, 6, 8] in the original collection are not in the
   target collection anymore (**removed**):
 
-  [1, <font color="red">2</font>, 3, 4, <font color="red">5</font>, 6,
-  <font color="red">7</font>, 8, <font color="red">9</font>, 10, 11]
+  [1, **2**, 3, 4, **5**, 6, **7**, 8, **9**, 10, 11]
 
 * The items at indices [1, 2] in the target collection are new in the target collection
   (**added**):
 
-  [1, <font color="green">15</font>, <font color="green">16</font>, 3, 6, 8, 4, 10, 11]
+  [1, **15, **16**, 3, 6, 8, 4, 10, 11]
 
 * The item at index 3 in the original collection is now at index 6 in the target collection
   (**moved**):
 
-  [1, 2, 3, <font color="blue">4</font>, 5, 6, 7, 8, 9, 10, 11]
+  [1, 2, 3, **4**, 5, 6, 7, 8, 9, 10, 11]
 
-  [1, 15, 16, 3, 6, 8, <font color="blue">4</font>, 10, 11]
+  [1, 15, 16, 3, 6, 8, **4**, 10, 11]
 
 Therefore, the method call would be `changeIndices([1, 4, 6, 8], [1, 2] {3: 6})`.
 
