@@ -3,6 +3,11 @@
   "version": "0.1.5",
   "license": "MIT",
   "author": "Bastian Müller <bastian@turbolent.com>",
+  "description": "UICollectionView for the web",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/turbolent/collection-view.git"
+  },
   "main": "./dist/index.js",
   "files": [
     "README.md",
