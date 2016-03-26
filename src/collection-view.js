@@ -13,6 +13,7 @@ export default class CollectionView {
   static DEFAULT_DISAPPEARING_CLASS_NAME = 'disappearing'
   static DEFAULT_ANIMATION_DURATION = 400
   static DEFAULT_RESIZE_THROTTLE = 1000
+  static EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
 
   constructor(content, layout, delegate) {
     this.content = content
@@ -304,10 +305,11 @@ export default class CollectionView {
     const start = Date.now()
     const [fromX, fromY] = this.getScrollPosition()
     const [toX, toY] = position
+    const easing = CollectionView.EASING
     const scroll = () => {
       const now = Date.now()
       const progress = Math.min(1, (now - start) / this.animationDuration)
-      const easedProgress = BezierEasing.ease.get(progress)
+      const easedProgress = easing(progress)
       const targetX = fromX + easedProgress * (toX - fromX)
       const targetY = fromY + easedProgress * (toY - fromY)
       this.scrollTo([targetX, targetY])

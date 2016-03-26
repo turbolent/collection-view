@@ -21,7 +21,7 @@
     "prepublish": "npm run build"
   },
   "dependencies": {
-    "bezier-easing": "1.1.x",
+    "bezier-easing": "2.0.x",
     "lodash.throttle": "3.0.x"
   },
   "devDependencies": {
