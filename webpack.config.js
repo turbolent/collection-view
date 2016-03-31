@@ -6,7 +6,6 @@ module.exports = {
   output: {
     path: path.join(__dirname, 'dist'),
     filename: "index.js",
-    library: "collection-view",
     libraryTarget: "umd"
   },
   module: {
