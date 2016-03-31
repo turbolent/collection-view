@@ -27,10 +27,14 @@ position in the collection.
 import { CollectionView, GridLayout } from 'collection-view'
 
 class Delegate {
-  getCount(items) {
+  constructor(items) {
     this.items = items
   }
 
+  getCount() {
+    return this.items.length
+  }
+  
   configureElement(element, index) {
     element.textContent = this.items[index]
   }
