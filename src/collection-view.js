@@ -361,15 +361,16 @@ export default class CollectionView {
       this.layout.getContentSize(this.count, this.containerSize)
 
     const [containerWidth, containerHeight] = this.containerSize
-    const right = this.scrollPosition[0] + containerWidth
+    const [scrollX, scrollY] = this.scrollPosition
+    const right = scrollX + containerWidth
     const adjustX = right > newContentWidth
     if (adjustX)
-      this.scrollPosition[0] -= right - newContentWidth
+      this.scrollPosition[0] = Math.max(0, scrollX - (right - newContentWidth))
 
-    const bottom = this.scrollPosition[1] + containerHeight
+    const bottom = scrollY + containerHeight
     const adjustY = bottom > newContentHeight
     if (adjustY)
-      this.scrollPosition[1] -= bottom - newContentHeight
+      this.scrollPosition[1] = Math.max(0, scrollY - (bottom - newContentHeight))
 
     if (adjustX || adjustY)
       this.animatedScrollTo(this.scrollPosition)
