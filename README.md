@@ -61,13 +61,13 @@ If the grid or list layouts do not fit your needs you can also
 The delegate object is responsible for defining how many items the collection view should display
 and configuring the elements corresponding to the items.
 
-- **getCount(): _Number_**
+- **getCount(): _Number_** (required)
 
   Return the number of items in the collection.
 
   Similar to [`UICollectionViewDataSource.collectionView(numberOfItemsInSection:)`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionViewDataSource_protocol/#//apple_ref/occ/intfm/UICollectionViewDataSource/collectionView:numberOfItemsInSection:)
 
-- **configureElement(element: _Element_, index: _Number_)**
+- **configureElement(element: _Element_, index: _Number_)** (required)
 
   Configure the DOM element that corresponds to the item in the collection at the given index.
   The element might have previously been used to represent another item in the collection,
@@ -76,6 +76,12 @@ and configuring the elements corresponding to the items.
 
   Similar to
 [`UICollectionViewDataSource.collectionView(cellForItemAtIndexPath:)`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionViewDataSource_protocol/#//apple_ref/occ/intfm/UICollectionViewDataSource/collectionView:cellForItemAtIndexPath:)
+
+- **onScroll(view: _CollectionView_)** (optional)
+
+  Callback when the collection view is scrolled.
+
+  Similar to [`UIScrollViewDelegate.scrollViewDidScroll:`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UIScrollViewDelegate_Protocol/#//apple_ref/occ/intfm/UIScrollViewDelegate/scrollViewDidScroll:)
 
 
 ## Changing the data
