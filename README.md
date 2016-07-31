@@ -259,6 +259,22 @@ to be implemented:
 
 ## Collection view
 
+* **contentSize: _Array[Int]_**
+
+  The size of the scrolled content. Computed by the layout based on the data returned from the delegate.
+
+  Similar to [`UIScrollView.contentSize`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UIScrollView_Class/index.html#//apple_ref/occ/instm/UIScrollView/contentSize)
+
+* **containerSize: _Array[Int]_**
+
+  The size of the container wrapping the scrolled content.
+
+* **scrollPosition: _Array[Int]_**
+
+  The point at which the origin of the content is offset from the origin of the collection view.
+
+  Similar to [`UIScrollView.contentOffset`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UIScrollView_Class/index.html#//apple_ref/occ/instp/UIScrollView/contentOffset)
+
 * **thresholds: _Object_**
 
   Specifies the additional values by which the region is extended that is used to determine
