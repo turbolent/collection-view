@@ -1,4 +1,4 @@
-import { CollectionView, ListLayout } from '../../../src'
+import { CollectionView, ListLayout } from '../../../dist'
 import style from '../../_common/style.css'
 import './style.css'
 
@@ -20,7 +20,11 @@ class Delegate {
 }
 
 window.onload = function () {
-  const items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+  const count = 100
+  const items = new Array(count)
+  for (let i = 0; i < count; i++)
+    items[i] = `${i + 1}`;
+
   const delegate = new Delegate(items)
   const scrollElement = document.getElementById('scroll')
   const layout = new ListLayout()
