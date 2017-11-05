@@ -1,20 +1,43 @@
-export default class GridLayout {
+import { NumberTuple } from './types'
+import CollectionViewLayout from './layout'
 
-  static Direction = {
-    VERTICAL: 0,
-    HORIZONTAL: 1
+
+export enum GridLayoutDirection {
+  VERTICAL,
+  HORIZONTAL
+}
+
+export interface GridLayoutParameters {
+  readonly direction?: GridLayoutDirection
+  readonly insets?: [NumberTuple, NumberTuple]
+  readonly spacing?: NumberTuple
+  readonly itemSize?: NumberTuple
+}
+
+
+export default class GridLayout implements CollectionViewLayout {
+
+  static readonly DEFAULT_DIRECTION: GridLayoutDirection = GridLayoutDirection.VERTICAL
+  static readonly DEFAULT_INSETS: [NumberTuple, NumberTuple] = [[10, 10], [10, 10]]
+  static readonly DEFAULT_SPACING: NumberTuple = [20, 20]
+  static readonly DEFAULT_ITEM_SIZE: NumberTuple = [200, 200] 
+  
+  private itemCount: number = 0
+  private containerSizeConstraint: number = 0
+  
+  readonly direction: GridLayoutDirection
+  readonly insets: [NumberTuple, NumberTuple]
+  readonly spacing: NumberTuple
+  readonly itemSize: NumberTuple
+
+  constructor({direction, insets, spacing, itemSize}: GridLayoutParameters) {
+    this.direction = direction || GridLayout.DEFAULT_DIRECTION
+    this.insets = insets || GridLayout.DEFAULT_INSETS
+    this.spacing = spacing || GridLayout.DEFAULT_SPACING    
+    this.itemSize = itemSize || GridLayout.DEFAULT_ITEM_SIZE
   }
 
-  constructor() {
-    this.itemSize = [200, 200]
-    this.spacing = [20, 20]
-    this.insets = [[10, 10], [10, 10]]
-    this.itemCount = 0
-    this.containerSizeConstraint = 0
-    this.direction = GridLayout.Direction.VERTICAL
-  }
-
-  getItemCount(containerSize) {
+  private getItemCount(containerSize: NumberTuple): number {
     const spacing = this.spacing[this.direction]
     const [startInset, endInset] = this.insets[this.direction]
     const availableSpace = containerSize[this.direction] - startInset - endInset
@@ -23,18 +46,18 @@ export default class GridLayout {
     return Math.floor(spaceAndSpacing / itemAndSpacing)
   }
 
-  configureElement(element, _index) {
+  configureElement(element: HTMLElement, index: number): void {
     const [width, height] = this.itemSize
     element.style.width = `${width}px`
     element.style.height = `${height}px`
   }
 
-  updateContainerSize(containerSize) {
+  updateContainerSize(containerSize: NumberTuple): void {
     this.containerSizeConstraint = containerSize[this.direction]
     this.itemCount = this.getItemCount(containerSize)
   }
 
-  getIndices(xOffsets, yOffsets, count, containerSize) {
+  getIndices(xOffsets: NumberTuple, yOffsets: NumberTuple, count: number, containerSize: NumberTuple): number[] {
     const offsets = [xOffsets, yOffsets]
     const otherDirection = 1 - this.direction
     const [otherStartInset, otherEndInset] = this.insets[otherDirection]
@@ -52,7 +75,7 @@ export default class GridLayout {
     return indices
   }
 
-  getElementPosition(index) {
+  getElementPosition(index: number): NumberTuple {
     const sectionIndex = Math.floor(index / this.itemCount)
     const itemIndex = index % this.itemCount
     const spacing = this.spacing[this.direction]
@@ -64,13 +87,13 @@ export default class GridLayout {
     const diff = availableSpace + spacing - this.itemCount * itemAndSpacing
     const otherspacing = this.spacing[otherDirection]
     const otherItemAndspacing = this.itemSize[otherDirection] + otherspacing
-    const result = []
+    const result: NumberTuple = [0, 0]
     result[this.direction] = startInset + itemIndex * itemAndSpacing + Math.max(0, diff / 2)
     result[otherDirection] = otherStartInset + sectionIndex * otherItemAndspacing
     return result
   }
 
-  getContentSize(count, containerSize) {
+  getContentSize(count: number, containerSize: NumberTuple): NumberTuple {
     const itemCount = this.getItemCount(containerSize)
     const sectionCount = Math.ceil(count / itemCount)
     const otherDirection = 1 - this.direction
@@ -78,15 +101,15 @@ export default class GridLayout {
     const spacing = this.spacing[otherDirection]
     const itemAndSpacing = this.itemSize[otherDirection] + spacing
     const space = startInset + sectionCount * itemAndSpacing + endInset
-    const result = []
+    const result: NumberTuple = [0, 0]
     result[this.direction] = containerSize[this.direction]
     result[otherDirection] = space
     return result
   }
 
-  convertPositionInSize(position, newContainerSize, oldLayout) {
+  convertPositionInSize(position: NumberTuple, newContainerSize: NumberTuple, oldLayout: CollectionViewLayout): NumberTuple {
     const oldGridLayout = oldLayout instanceof GridLayout
-                          ? oldLayout
+                          ? oldLayout as GridLayout
                           : this
     const oldOtherDimension = 1 - oldGridLayout.direction
     const oldOtherPosition = position[oldOtherDimension]
@@ -103,7 +126,7 @@ export default class GridLayout {
     const newOtherItemAndSpacing = this.itemSize[newOtherDimension] + newOtherspacing
     const newOtherPosition = newSectionIndex * newOtherItemAndSpacing + oldItemOffset
 
-    const result = []
+    const result: NumberTuple = [0, 0]
     result[this.direction] = 0
     result[newOtherDimension] = newOtherPosition
     return result

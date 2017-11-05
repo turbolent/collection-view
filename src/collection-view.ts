@@ -1,48 +1,140 @@
-import BezierEasing from 'bezier-easing'
-import throttle from 'lodash.throttle'
-import { requestAnimFrame, transitionEndEventName } from './polyfills'
+import { NumberTuple } from './types'
+import CollectionViewLayout from './layout'
 import style from './style.css'
 
+import BezierEasing = require('bezier-easing')
+import throttle from "lodash-es/throttle"
+
+const TRANSITION_END_EVENT = "transitionend"
+
+// TODO: move to separate file
+
+function unique<T>(items: T[]): T[] {
+  const seen = new Map<T, boolean>()
+  return items.filter(item => {
+    if (seen.has(item))
+      return false
+    seen.set(item, true)
+    return true
+  })
+}
+
+function sort(indices: number[]): number[] {
+  return indices.sort((a, b) => a < b ? -1 : 1)
+}
+
+function coalesce<T>(value: T | undefined | null, defaultValue: T): T {
+  if (value === null || value === undefined)
+    return defaultValue;
+  
+  return value;
+}
+
+
+export interface CollectionViewDelegate {
+  getCount(): number
+  onScroll?(collectionView: CollectionView): void
+  configureElement(element: HTMLElement, index: number): void
+}
+
+export interface CollectionViewThresholds {
+    readonly left: number
+    readonly top: number
+    readonly right: number
+    readonly bottom: number
+}
+
+export interface CollectionViewParameters {
+  readonly animationDuration?: number
+  readonly repositioningClassName?: string
+  readonly appearingClassName?: string
+  readonly disappearingClassName?: string
+  readonly thresholds?: {
+    readonly left?: number
+    readonly top?: number
+    readonly right?: number
+    readonly bottom?: number
+  }
+}
 
 export default class CollectionView {
+  private static readonly EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
+  
+  static readonly DEFAULT_THRESHOLD: number = 3000
+  static readonly DEFAULT_REPOSITIONING_CLASS_NAME: string = 'repositioning'
+  static readonly DEFAULT_APPEARING_CLASS_NAME: string= 'appearing'
+  static readonly DEFAULT_DISAPPEARING_CLASS_NAME: string = 'disappearing'
+  static readonly DEFAULT_ANIMATION_DURATION: number = 400
+  static readonly DEFAULT_RESIZE_THROTTLE: number = 1000
+ 
+  private wantsResize: boolean = false  
+  private resizing: boolean = false
+  private updating: boolean = false
+  private installed: boolean = true
+  private contentSize: NumberTuple = [0, 0]
+  private containerSize: NumberTuple = [0, 0]
+  // TODO: add getter
+  private scrollPosition: NumberTuple = [0, 0]
+  private count: number = 0  
+  private elements: Map<number, HTMLElement>
+  private visibleIndices: number[] = []
+  private onResize: () => void
 
-  static THRESHOLD_PROPERTIES = ['left', 'top', 'right', 'bottom']
-  static DEFAULT_THRESHOLD = 3000
-  static DEFAULT_REPOSITIONING_CLASS_NAME = 'repositioning'
-  static DEFAULT_APPEARING_CLASS_NAME = 'appearing'
-  static DEFAULT_DISAPPEARING_CLASS_NAME = 'disappearing'
-  static DEFAULT_ANIMATION_DURATION = 400
-  static DEFAULT_RESIZE_THROTTLE = 1000
-  static EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
+  // TODO: add getter
+  private delegate: CollectionViewDelegate
+  // TODO: add getter
+  private layout: CollectionViewLayout
+  // TODO: add getter
+  private content: HTMLElement
+  private container: HTMLElement
 
-  constructor(content, layout, delegate) {
+  readonly animationDuration: number
+  readonly repositioningClassName: string
+  readonly appearingClassName: string
+  readonly disappearingClassName: string
+  readonly thresholds: CollectionViewThresholds
+
+  constructor(content: HTMLElement,
+              layout: CollectionViewLayout,
+              delegate: CollectionViewDelegate,
+              {
+                animationDuration, 
+                repositioningClassName,
+                appearingClassName, 
+                disappearingClassName,
+                thresholds
+              }: CollectionViewParameters = {})
+  {
     this.content = content
     content.classList.add(style.content)
     this.layout = layout
     this.delegate = delegate
-    this.container = content.parentElement
-    this.container.classList.add(style.container)
-    this.scrollPosition = [0, 0]
-    this.containerSize = [0, 0]
-    this.contentSize = [0, 0]
-    this.elements = {}
-    this.updating = false
-    this.resizing = false
-    this.visibleIndices = []
-    this.animationDuration = CollectionView.DEFAULT_ANIMATION_DURATION
-    this.thresholds = {}
-    const defaultThreshold = CollectionView.DEFAULT_THRESHOLD
-    CollectionView.THRESHOLD_PROPERTIES.forEach(property =>
-      this.thresholds[property] = defaultThreshold)
-    this.repositioningClassName = CollectionView.DEFAULT_REPOSITIONING_CLASS_NAME
-    this.appearingClassName = CollectionView.DEFAULT_APPEARING_CLASS_NAME
-    this.disappearingClassName = CollectionView.DEFAULT_DISAPPEARING_CLASS_NAME
 
+    // TODO: assert not null
+    let container = content.parentElement
+    this.container = container as any as HTMLElement
+    this.container.classList.add(style.container)
+
+    this.animationDuration = coalesce(animationDuration, CollectionView.DEFAULT_ANIMATION_DURATION)
+    this.repositioningClassName = coalesce(repositioningClassName, CollectionView.DEFAULT_REPOSITIONING_CLASS_NAME)
+    this.appearingClassName = coalesce(appearingClassName, CollectionView.DEFAULT_APPEARING_CLASS_NAME)
+    this.disappearingClassName = coalesce(disappearingClassName, CollectionView.DEFAULT_DISAPPEARING_CLASS_NAME)
+
+    if (!thresholds)
+      thresholds = {}
+    this.thresholds = {
+      left: coalesce(thresholds.left, CollectionView.DEFAULT_THRESHOLD),
+      top: coalesce(thresholds.top, CollectionView.DEFAULT_THRESHOLD),
+      right: coalesce(thresholds.right, CollectionView.DEFAULT_THRESHOLD),
+      bottom: coalesce(thresholds.bottom, CollectionView.DEFAULT_THRESHOLD)
+    }
+    
     this.updateContainerSize(this.layout)
     this.updateCount()
     this.updateContentSize(this.layout)
 
     this.onScroll = this.onScroll.bind(this)
+    // TODO: make resize throttle duration a parameter
     this.onResize = throttle(() => this.resize(),
       CollectionView.DEFAULT_RESIZE_THROTTLE,
       {leading: false})
@@ -59,10 +151,9 @@ export default class CollectionView {
     // })
 
     this.updateCurrentIndices()
-    this.installed = true
   }
 
-  uninstall() {
+  public uninstall(): void {
     this.installed = false
 
     this.content.classList.remove(style.content)
@@ -73,43 +164,55 @@ export default class CollectionView {
 
     window.removeEventListener('resize', this.onResize, false)
 
-    this.forEachVisibleElement(element =>
-      element.parentElement.removeChild(element))
+    this.elements.forEach(element => {
+      const parent = element.parentElement
+      if (parent)
+        parent.removeChild(element)
+    })
   }
 
-  getContainerSize() {
-    return [this.container.clientWidth,
-            this.container.clientHeight]
+  // TODO: make getter
+  private getContainerSize(): NumberTuple {
+    return [
+      this.container.clientWidth,
+      this.container.clientHeight
+    ]
   }
 
-  updateContainerSize(layout) {
+  private updateContainerSize(layout: CollectionViewLayout): void {
     this.containerSize = this.getContainerSize()
-    layout.updateContainerSize(this.containerSize)
+    if (layout.updateContainerSize)
+      layout.updateContainerSize(this.containerSize)
   }
 
-  updateCount() {
+  private updateCount(): void {
     this.count = this.delegate.getCount()
   }
 
-  updateContentSize(layout) {
-    this.contentSize = layout.getContentSize(this.count, this.getContainerSize())
+  private updateContentSize(layout: CollectionViewLayout): void {
+    const containerSize = this.getContainerSize()
+    this.contentSize = layout.getContentSize(this.count, containerSize)
     const [contentWidth, contentHeight] = this.contentSize
-    this.content.style.minWidth = contentWidth + 'px'
-    this.content.style.minHeight = contentHeight + 'px'
+    this.content.style.minWidth = `${contentWidth}px`
+    this.content.style.minHeight = `${contentHeight}px`
   }
 
-  getScrollPosition() {
-    return [this.container.scrollLeft,
-            this.container.scrollTop]
+  // TODO: make getter
+  private getScrollPosition(): NumberTuple {
+    return [
+      this.container.scrollLeft,
+      this.container.scrollTop
+    ]
   }
 
-  onScroll() {
+  private onScroll(): void {
     this.scrollPosition = this.getScrollPosition()
 
     if (this.updating)
       return
     this.updating = true
-    requestAnimFrame(() => {
+
+    requestAnimationFrame(() => {
       this.updateCurrentIndices()
       if (this.delegate.onScroll)
         this.delegate.onScroll(this)
@@ -117,14 +220,16 @@ export default class CollectionView {
     })
   }
 
-  getAxisOffsets(position, range, startThreshold, endThreshold) {
+  // TODO: make getter
+  private getAxisOffsets(position: number, range: number, startThreshold: number, endThreshold: number): NumberTuple {
     const offset = Math.max(0, position - startThreshold)
     const fullRange = startThreshold + range + endThreshold
     const endOffset = offset + fullRange
     return [offset, endOffset]
   }
 
-  getOffsets(position) {
+  // TODO: make getter
+  private getOffsets(position: NumberTuple): [NumberTuple, NumberTuple] {
     const [x, y] = position
     const [containerWidth, containerHeight] = this.containerSize
     const {left, top, right, bottom} = this.thresholds
@@ -133,35 +238,29 @@ export default class CollectionView {
     return [xOffsets, yOffsets]
   }
 
-  getIndices(layout, position, containerSize) {
+  private getIndices(layout: CollectionViewLayout, position: NumberTuple, containerSize: NumberTuple): number[] {
     const [xOffsets, yOffsets] = this.getOffsets(position)
     return layout.getIndices(xOffsets, yOffsets, this.count, containerSize)
   }
 
-  getCurrentIndices() {
+  // TODO: make getter
+  private getCurrentIndices(): number[] {
     return this.getIndices(this.layout, this.scrollPosition, this.containerSize)
   }
 
-  updateCurrentIndices() {
+  private updateCurrentIndices(): void {
     this.updateIndices(this.getCurrentIndices())
   }
 
-  forEachVisibleElement(fn) {
-    this.keysAsNumbers(this.elements).forEach(index => {
-      const element = this.elements[index]
-      fn(element, index)
-    })
-  }
-
-  updateIndices(newIndices) {
+  private updateIndices(newIndices: number[]): void {
     // determine old elements
-    const invalidElements = []
+    const invalidElements: HTMLElement[] = []
 
-    this.forEachVisibleElement((element, index) => {
+    this.elements.forEach((element, index) => {
       if (newIndices.indexOf(index) >= 0)
         return
 
-      delete this.elements[index]
+      this.elements.delete(index)
       invalidElements.push(element)
     })
 
@@ -174,58 +273,54 @@ export default class CollectionView {
                 this.configureElement(this.layout, element, index)
                 this.positionElement(this.layout, element, index)
                 element.classList.remove(this.repositioningClassName)
-                this.elements[index] = element
+                this.elements.set(index, element)
               })
     this.visibleIndices = newIndices
 
     // actually remove old elements, which weren't reused
-    invalidElements.forEach(element =>
-      element.parentElement.removeChild(element))
+    invalidElements.forEach(element => {
+      if (element == null)
+        return;
+      const parent = element.parentElement
+      if (parent)
+        parent.removeChild(element)
+    })
   }
 
-  configureElement(layout, element, index) {
+  private configureElement(layout: CollectionViewLayout, element: HTMLElement, index: number): void {
     this.delegate.configureElement(element, index)
     layout.configureElement(element, index)
   }
 
-  positionElement(layout, element, index) {
-    element.style.zIndex = index + 1
+  private positionElement(layout: CollectionViewLayout, element: HTMLElement, index: number): void {
+    element.style.zIndex = `${index + 1}`
     const [x, y] = layout.getElementPosition(index)
     element.style.transform = `translate3d(${x}px, ${y}px, 0)`
   }
 
-  createAndAddElement() {
+  private createAndAddElement(): HTMLElement {
     const element = document.createElement('div')
     element.classList.add(style.element)
     this.content.appendChild(element)
     return element
   }
 
-  unique(items) {
-    const seen = {}
-    return items.filter(item => {
-      if (seen.hasOwnProperty(item))
-        return false
-      return (seen[item] = true)
-    })
-  }
+  private repositionVisibleElements(layout: CollectionViewLayout): void {
 
-  repositionVisibleElements(layout) {
-
-    this.forEachVisibleElement((element, index) => {
+    this.elements.forEach((element, index) => {
       const onTransitionEnd = () => {
-        element.removeEventListener(transitionEndEventName, onTransitionEnd, false)
+        element.removeEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
         element.classList.remove(this.repositioningClassName)
       }
 
-      element.addEventListener(transitionEndEventName, onTransitionEnd, false)
+      element.addEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
       element.classList.add(this.repositioningClassName)
 
       this.positionElement(layout, element, index)
     })
   }
 
-  resize() {
+  private resize(): void {
     if (this.resizing) {
       this.wantsResize = true
       return
@@ -242,7 +337,7 @@ export default class CollectionView {
     })
   }
 
-  updateLayout(newLayout, completion) {
+  public updateLayout(newLayout: CollectionViewLayout, completion: () => void): void {
 
     this.container.removeEventListener('scroll', this.onScroll, false)
 
@@ -252,7 +347,7 @@ export default class CollectionView {
     const newPosition =
       newLayout.convertPositionInSize(this.scrollPosition, newContainerSize, this.layout)
     const futureIndices = this.getIndices(newLayout, newPosition, newContainerSize)
-    const indices = this.unique(this.visibleIndices.concat(futureIndices))
+    const indices = unique(this.visibleIndices.concat(futureIndices))
     this.updateIndices(indices)
 
 
@@ -263,7 +358,7 @@ export default class CollectionView {
     const diffY = newPosition[1] - this.scrollPosition[1]
 
     if (diffX || diffY) {
-      Object.values(this.elements).forEach(element =>
+      this.elements.forEach(element =>
         element.style.transform += ` translate3d(${diffX}px, ${diffY}px, 0)`)
     }
 
@@ -280,7 +375,7 @@ export default class CollectionView {
 
       this.repositionVisibleElements(newLayout)
 
-      this.forEachVisibleElement((element, index) =>
+      this.elements.forEach((element, index) =>
         newLayout.configureElement(element, index))
 
       this.layout = newLayout
@@ -295,13 +390,15 @@ export default class CollectionView {
     }, 0)
   }
 
-  scrollTo(position) {
+  // TODO: OK to make this public?
+  private scrollTo(position: NumberTuple): void {
     const [x, y] = position
     this.container.scrollLeft = x
     this.container.scrollTop = y
   }
 
-  animatedScrollTo(position) {
+  // TODO: OK to make this public?
+  private animatedScrollTo(position: NumberTuple): void {
     const start = Date.now()
     const [fromX, fromY] = this.getScrollPosition()
     const [toX, toY] = position
@@ -315,33 +412,26 @@ export default class CollectionView {
       this.scrollTo([targetX, targetY])
 
       if (progress < 1)
-        requestAnimFrame(scroll)
+        requestAnimationFrame(scroll)
     }
 
-    requestAnimFrame(scroll)
+    requestAnimationFrame(scroll)
   }
 
-  sort(indices) {
-    return indices.sort((a, b) => { return a < b ? -1 : 1 })
-  }
-
-  keysAsNumbers(map) {
-    return Object.keys(map).map(Number)
-  }
-
-  changeIndices(removedIndices, addedIndices, movedIndexMap) {
+  public changeIndices(removedIndices: number[], addedIndices: number[], movedIndexMap: Map<number, number>): void {
 
     this.container.removeEventListener('scroll', this.onScroll, false)
 
     // prepare moved mapping
 
-    const oldMovedIndices = this.keysAsNumbers(movedIndexMap)
-    const reverseMovedIndexMap = {}
+    const oldMovedIndices = Array.from(movedIndexMap.keys())
+    const reverseMovedIndexMap = new Map<number, number>()
     oldMovedIndices.forEach(oldIndex => {
-      const newIndex = movedIndexMap[oldIndex]
-      reverseMovedIndexMap[newIndex] = oldIndex
+      // TODO: assert
+      const newIndex = movedIndexMap.get(oldIndex) as number
+      reverseMovedIndexMap.set(newIndex, oldIndex)
     })
-    const newMovedIndices = this.keysAsNumbers(reverseMovedIndexMap)
+    const newMovedIndices = Array.from(reverseMovedIndexMap.keys())
 
     // update count
 
@@ -379,31 +469,34 @@ export default class CollectionView {
     // disappear and remove elements
 
     removedIndices.forEach(index => {
-      const element = this.elements[index]
+      const element = this.elements.get(index)
       if (!element)
         return
 
       element.classList.add(this.disappearingClassName)
-      element.style.zIndex = 0
-      setTimeout(() =>
-          element.parentElement.removeChild(element),
-        this.animationDuration)
-      delete this.elements[index]
+      element.style.zIndex = "0"
+      setTimeout(() => {
+          const parent = element.parentElement
+          if (parent)
+            parent.removeChild(element)
+        }, this.animationDuration)
+      this.elements.delete(index)
     })
 
 
     // reorder visible elements
 
-    const removedOrMovedIndices = this.sort(removedIndices.concat(oldMovedIndices))
-    const addedOrMovedIndices = this.sort(addedIndices.concat(newMovedIndices))
+    const removedOrMovedIndices = sort(removedIndices.concat(oldMovedIndices))
+    const addedOrMovedIndices = sort(addedIndices.concat(newMovedIndices))
 
     let removedOrMovedReorderOffset = 0
-    const newElements = {}
+    const newElements = new Map<number, HTMLElement>()
 
-    this.forEachVisibleElement((element, index) => {
-      let newIndex
-      if (movedIndexMap.hasOwnProperty(index)) {
-        newIndex = movedIndexMap[index]
+    this.elements.forEach((element, index) => {
+      let newIndex: number
+      const movedIndex = movedIndexMap.get(index)      
+      if (movedIndex !== undefined) {
+        newIndex = movedIndex
       } else {
         while (removedOrMovedReorderOffset < removedOrMovedIndices.length
                && removedOrMovedIndices[removedOrMovedReorderOffset] <= index)
@@ -422,7 +515,7 @@ export default class CollectionView {
         newIndex = index - removedOrMovedReorderOffset + addedOrMovedReorderOffset
       }
 
-      newElements[newIndex] = element
+      newElements.set(newIndex, element)
     })
     this.elements = newElements
 
@@ -436,9 +529,10 @@ export default class CollectionView {
 
     newIndices.forEach(index => {
 
-      let oldIndex
-      if (reverseMovedIndexMap.hasOwnProperty(index)) {
-        oldIndex = reverseMovedIndexMap[index]
+      let oldIndex: number
+      const reverseMovedIndex = reverseMovedIndexMap.get(index)
+      if (reverseMovedIndex !== undefined) {
+        oldIndex = reverseMovedIndex
       } else {
         while (addedOrMovedLoadOffset < addedOrMovedIndices.length
                && addedOrMovedIndices[addedOrMovedLoadOffset] <= index)
@@ -456,7 +550,7 @@ export default class CollectionView {
         oldIndex = index - addedOrMovedLoadOffset + removedOrMovedLoadOffset
       }
 
-      const existingElement = this.elements[index]
+      const existingElement = this.elements.get(index)
       if (existingElement)
         return
 
@@ -469,7 +563,7 @@ export default class CollectionView {
         window.getComputedStyle(element).opacity
         element.classList.remove(this.appearingClassName)
       }
-      this.elements[index] = element
+      this.elements.set(index, element)
     })
 
     this.visibleIndices = newIndices

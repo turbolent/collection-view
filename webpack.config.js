@@ -1,31 +1,39 @@
-var webpack = require('webpack');
-var path = require('path');
+const path = require('path')
+const BabelWebpackPlugin = require('babel-minify-webpack-plugin');
 
 module.exports = {
-  entry: "./src/index.js",
-  output: {
-    path: path.join(__dirname, 'dist'),
-    filename: "index.js",
-    libraryTarget: "umd"
-  },
+  entry: './src/index.ts',
   module: {
-    preLoaders: [
-      { test: /\.js$/,
-        loader: "eslint-loader",
+    rules: [
+      {
+        test: /\.tsx?$/,
+        loader: 'ts-loader',
         exclude: /node_modules/
-      }
-    ],
-    loaders: [
-      { test: /\.css$/,
-        loaders: ["style", "css?modules"]
       },
-      { test: /\.js$/,
-        exclude: /node_modules/,
-        loader: "babel?optional[]=runtime&stage=0"
+      {
+        test: /\.css$/,
+        use: [
+          {
+            loader: 'style-loader'
+          },
+          {
+            loader: 'css-loader',
+            options: {
+              modules: true,
+            }
+          }
+        ]
       }
     ]
   },
-  eslint: {
-    failOnError: true
-  }
-}
+  resolve: {
+    extensions: [ ".ts", ".js" ]
+  },
+  output: {
+    filename: 'index.js',
+    path: path.resolve(__dirname, 'dist')
+  },
+  plugins: [
+    new BabelWebpackPlugin()
+  ]
+};

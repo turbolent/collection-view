@@ -1,6 +1,6 @@
 {
   "name": "collection-view",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "license": "MIT",
   "author": "Bastian Müller <bastian@turbolent.com>",
   "description": "UICollectionView for the web",
@@ -8,7 +8,8 @@
     "type": "git",
     "url": "https://github.com/turbolent/collection-view.git"
   },
-  "main": "./dist/index.js",
+  "main": "dist/index.js",
+  "module": "src/index.js",
   "files": [
     "README.md",
     "dist/",
@@ -17,21 +18,23 @@
     "examples/"
   ],
   "scripts": {
-    "build": "webpack",
-    "prepublish": "npm run build"
+    "build": "webpack -p",
+    "prepublishOnly": "npm run build",
+    "lint": "tslint -c tslint.json 'src/**/*.ts'"
   },
   "dependencies": {
+    "@types/bezier-easing": "2.0.x",
+    "@types/lodash-es": "4.17.x",
     "bezier-easing": "2.0.x",
-    "lodash.throttle": "3.0.x"
+    "lodash-es": "^4.17.4"
   },
   "devDependencies": {
-    "babel-core": "5.8.x",
-    "babel-loader": "5.3.x",
-    "babel-runtime": "5.8.x",
-    "babel-eslint": "4.1.x",
-    "webpack": "1.12.x",
-    "style-loader": "0.13.x",
-    "css-loader": "0.21.x",
-    "eslint-loader": "1.1.x"
+    "babel-minify-webpack-plugin": "0.2.x",
+    "css-loader": "0.28.x",
+    "style-loader": "0.19.x",
+    "ts-loader": "3.1.x",
+    "tslint": "5.8.x",
+    "typescript": "2.6.x",
+    "webpack": "3.8.x"
   }
 }
