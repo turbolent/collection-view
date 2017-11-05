@@ -1,36 +1,12 @@
 import CollectionViewLayout from './layout'
 import style from './style.css'
 import { NumberTuple } from './types'
+import { unique, coalesce, sort } from './utils'
 
 import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
 
 const TRANSITION_END_EVENT = 'transitionend'
-
-// TODO: move to separate file
-
-function unique<T>(items: T[]): T[] {
-  const seen = new Map<T, boolean>()
-  return items.filter((item) => {
-    if (seen.has(item)) {
-      return false
-    }
-    seen.set(item, true)
-    return true
-  })
-}
-
-function sort(indices: number[]): number[] {
-  return indices.sort((a, b) => a < b ? -1 : 1)
-}
-
-function coalesce<T>(value: T | undefined | null, defaultValue: T): T {
-  if (value === null || value === undefined) {
-    return defaultValue
-  }
-
-  return value
-}
 
 export interface CollectionViewDelegate {
   getCount(): number
