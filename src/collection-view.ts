@@ -2,7 +2,7 @@ import CollectionViewLayout from './layout'
 import style from './style.css'
 import { NumberTuple } from './types'
 
-import BezierEasing = require('bezier-easing')
+import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
 
 const TRANSITION_END_EVENT = 'transitionend'
