@@ -26,6 +26,7 @@ export interface CollectionViewParameters {
   readonly repositioningClassName?: string
   readonly appearingClassName?: string
   readonly disappearingClassName?: string
+  readonly resizeThrottleDuration?: number
   readonly thresholds?: {
     readonly left?: number
     readonly top?: number
@@ -68,6 +69,7 @@ export default class CollectionView {
   readonly appearingClassName: string
   readonly disappearingClassName: string
   readonly thresholds: CollectionViewThresholds
+  readonly resizeThrottleDuration: number
 
   get scrollPosition(): NumberTuple {
     return this._scrollPosition
@@ -126,7 +128,7 @@ export default class CollectionView {
     this.onScroll = this.onScroll.bind(this)
     // TODO: make resize throttle duration a parameter
     this._onResize = throttle(() => this.resize(),
-      CollectionView.DEFAULT_RESIZE_THROTTLE,
+      coalesce(parameters.resizeThrottleDuration, CollectionView.DEFAULT_RESIZE_THROTTLE),
       {leading: false})
 
     this._container.addEventListener('scroll', this.onScroll, false)
