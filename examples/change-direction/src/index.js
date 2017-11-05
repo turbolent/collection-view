@@ -1,5 +1,5 @@
 
-import { CollectionView, GridLayout } from '../../../src'
+import { CollectionView, GridLayout } from '../../../dist'
 import style from '../../_common/style.css'
 
 
