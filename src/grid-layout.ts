@@ -1,6 +1,5 @@
-import { NumberTuple } from './types'
 import CollectionViewLayout from './layout'
-
+import { NumberTuple } from './types'
 
 export enum GridLayoutDirection {
   VERTICAL,
@@ -14,17 +13,16 @@ export interface GridLayoutParameters {
   readonly itemSize?: NumberTuple
 }
 
-
 export default class GridLayout implements CollectionViewLayout {
 
   static readonly DEFAULT_DIRECTION: GridLayoutDirection = GridLayoutDirection.VERTICAL
   static readonly DEFAULT_INSETS: [NumberTuple, NumberTuple] = [[10, 10], [10, 10]]
   static readonly DEFAULT_SPACING: NumberTuple = [20, 20]
-  static readonly DEFAULT_ITEM_SIZE: NumberTuple = [200, 200] 
-  
+  static readonly DEFAULT_ITEM_SIZE: NumberTuple = [200, 200]
+
   private itemCount: number = 0
   private containerSizeConstraint: number = 0
-  
+
   readonly direction: GridLayoutDirection
   readonly insets: [NumberTuple, NumberTuple]
   readonly spacing: NumberTuple
@@ -33,7 +31,7 @@ export default class GridLayout implements CollectionViewLayout {
   constructor({direction, insets, spacing, itemSize}: GridLayoutParameters) {
     this.direction = direction || GridLayout.DEFAULT_DIRECTION
     this.insets = insets || GridLayout.DEFAULT_INSETS
-    this.spacing = spacing || GridLayout.DEFAULT_SPACING    
+    this.spacing = spacing || GridLayout.DEFAULT_SPACING
     this.itemSize = itemSize || GridLayout.DEFAULT_ITEM_SIZE
   }
 
@@ -70,8 +68,9 @@ export default class GridLayout implements CollectionViewLayout {
     const startIndex = Math.max(0, Math.floor(offset / itemAndSpacing) * itemCount)
     const endIndex = Math.min(Math.ceil(endOffset / itemAndSpacing) * itemCount, count)
     const indices = []
-    for (let i = startIndex; i < endIndex; i += 1)
+    for (let i = startIndex; i < endIndex; i += 1) {
       indices.push(i)
+    }
     return indices
   }
 
@@ -107,7 +106,10 @@ export default class GridLayout implements CollectionViewLayout {
     return result
   }
 
-  convertPositionInSize(position: NumberTuple, newContainerSize: NumberTuple, oldLayout: CollectionViewLayout): NumberTuple {
+  convertPositionInSize(position: NumberTuple,
+                        newContainerSize: NumberTuple,
+                        oldLayout: CollectionViewLayout): NumberTuple {
+
     const oldGridLayout = oldLayout instanceof GridLayout
                           ? oldLayout as GridLayout
                           : this
