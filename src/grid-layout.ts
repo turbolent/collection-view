@@ -28,7 +28,7 @@ export default class GridLayout implements CollectionViewLayout {
   readonly spacing: NumberTuple
   readonly itemSize: NumberTuple
 
-  constructor({direction, insets, spacing, itemSize}: GridLayoutParameters) {
+  constructor({direction, insets, spacing, itemSize}: GridLayoutParameters = {}) {
     this.direction = direction || GridLayout.DEFAULT_DIRECTION
     this.insets = insets || GridLayout.DEFAULT_INSETS
     this.spacing = spacing || GridLayout.DEFAULT_SPACING
