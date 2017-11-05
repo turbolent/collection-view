@@ -434,6 +434,15 @@ export default class CollectionView {
 
   public changeIndices(removedIndices: number[], addedIndices: number[], movedIndexMap: Map<number, number>): void {
 
+    // handle legacy Object
+    if (!(movedIndexMap instanceof Map)) {
+      const movedIndexObject = movedIndexMap as { [key: string]: any }
+      const pairs = Object.keys(movedIndexObject)
+        .map((key): [number, number] =>
+          [Number(key), Number(movedIndexObject[key])])
+      movedIndexMap = new Map<number, number>(pairs)
+    }
+
     this.container.removeEventListener('scroll', this.onScroll, false)
 
     // prepare moved mapping
