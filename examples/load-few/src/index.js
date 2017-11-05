@@ -1,5 +1,5 @@
 
-import { CollectionView, GridLayout } from '../../../src'
+import { CollectionView, GridLayout } from '../../../dist'
 import style from '../../_common/style.css'
 
 
@@ -27,6 +27,6 @@ window.onload = function () {
   const button = document.getElementById('button')
   button.onclick = function () {
     delegate.items = ["A", "B", "C"]
-    view.changeIndices([], delegate.items.map((_, index) => index), {})
+    view.changeIndices([], delegate.items.map((_, index) => index), new Map())
   }
 }

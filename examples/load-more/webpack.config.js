@@ -1,4 +1,3 @@
-var webpack = require('webpack');
 var path = require('path');
 
 module.exports = {
@@ -8,13 +7,20 @@ module.exports = {
     filename: "index.js"
   },
   module: {
-    loaders: [
-      { test: /\.css$/,
-        loaders: ["style", "css?modules"]
-      },
-      { test: /\.js$/,
-        exclude: /node_modules/,
-        loader: "babel?optional[]=runtime&stage=0"
+    rules: [
+      {
+        test: /\.css$/,
+        use: [
+          {
+            loader: 'style-loader'
+          },
+          {
+            loader: 'css-loader',
+            options: {
+              modules: true,
+            }
+          }
+        ]
       }
     ]
   }
