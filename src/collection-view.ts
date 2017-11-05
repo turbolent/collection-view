@@ -34,6 +34,8 @@ export interface CollectionViewParameters {
   }
 }
 
+class InvalidArgumentError extends Error {}
+
 export default class CollectionView {
   private static readonly EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
 
@@ -93,9 +95,11 @@ export default class CollectionView {
     this._layout = layout
     this.delegate = delegate
 
-    // TODO: assert not null
     const container = content.parentElement
-    this._container = container as any as HTMLElement
+    if (container === null) {
+      throw new InvalidArgumentError("Content element should be contained in a container element")
+    }
+    this._container = container as HTMLElement
     this._container.classList.add(style.container)
 
     this.animationDuration = coalesce(parameters.animationDuration,
