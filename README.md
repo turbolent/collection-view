@@ -93,15 +93,15 @@ in the form of the indices of the items which were removed, added, and moved, pa
 
 **changeIndices(removed: _number[]_, added: _number[]_, moved: _Map.<number, number>_)**
 
-* **removed:**
+* **removed: _number[]_**
 
   Indices which were removed, referring to the collection before the changes
 
-* **added:**
+* **added: _number[]_**
 
   Indices which were added, referring to the collection after the changes
 
-* **moved:**
+* **moved: _Map.<number, number>_**
 
   Indices which were moved. The keys are indices referring to the collection before the changes,
   and the values are indices referring to the collection after the changes. 
@@ -130,7 +130,8 @@ to the target collection [1, 15, 16, 3, 6, 8, 4, 10, 11]:
 
   [1, 15, 16, 3, 6, 8, **4**, 10, 11]
 
-Therefore, the method call would be `changeIndices([1, 4, 6, 8], [1, 2] {3: 6})`.
+Therefore, the method call would be `changeIndices([1, 4, 6, 8], [1, 2], new Map([[3, 6]]))` 
+(or alternatively `changeIndices([1, 4, 6, 8], [1, 2], {3: 6})` for older environments).
 
 Similar to calling
 [`UICollectionView.deleteItemsAtIndexPaths()`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionView_class/index.html#//apple_ref/occ/instm/UICollectionView/deleteItemsAtIndexPaths:),
