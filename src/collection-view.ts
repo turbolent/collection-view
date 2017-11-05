@@ -126,9 +126,10 @@ export default class CollectionView {
     this.updateContentSize(this._layout)
 
     this.onScroll = this.onScroll.bind(this)
-    // TODO: make resize throttle duration a parameter
+
     this._onResize = throttle(() => this.resize(),
-      coalesce(parameters.resizeThrottleDuration, CollectionView.DEFAULT_RESIZE_THROTTLE),
+      coalesce(parameters.resizeThrottleDuration, 
+               CollectionView.DEFAULT_RESIZE_THROTTLE),
       {leading: false})
 
     this._container.addEventListener('scroll', this.onScroll, false)
@@ -164,8 +165,7 @@ export default class CollectionView {
     })
   }
 
-  // TODO: make getter
-  private getContainerSize(): NumberTuple {
+  private get currentContainerSize(): NumberTuple {
     return [
       this._container.clientWidth,
       this._container.clientHeight
@@ -173,7 +173,7 @@ export default class CollectionView {
   }
 
   private updateContainerSize(layout: CollectionViewLayout): void {
-    this._containerSize = this.getContainerSize()
+    this._containerSize = this.currentContainerSize
     if (layout.updateContainerSize) {
       layout.updateContainerSize(this._containerSize)
     }
@@ -184,15 +184,14 @@ export default class CollectionView {
   }
 
   private updateContentSize(layout: CollectionViewLayout): void {
-    const containerSize = this.getContainerSize()
+    const containerSize = this.currentContainerSize
     this._contentSize = layout.getContentSize(this._count, containerSize)
     const [contentWidth, contentHeight] = this._contentSize
     this.content.style.minWidth = `${contentWidth}px`
     this.content.style.minHeight = `${contentHeight}px`
   }
 
-  // TODO: make getter
-  private getScrollPosition(): NumberTuple {
+  private get currentScrollPosition(): NumberTuple {
     return [
       this._container.scrollLeft,
       this._container.scrollTop
@@ -200,7 +199,7 @@ export default class CollectionView {
   }
 
   private onScroll(): void {
-    this._scrollPosition = this.getScrollPosition()
+    this._scrollPosition = this.currentScrollPosition
 
     if (this._updating) {
       return
@@ -216,7 +215,6 @@ export default class CollectionView {
     })
   }
 
-  // TODO: make getter
   private getAxisOffsets(position: number, range: number, startThreshold: number, endThreshold: number): NumberTuple {
     const offset = Math.max(0, position - startThreshold)
     const fullRange = startThreshold + range + endThreshold
@@ -224,7 +222,6 @@ export default class CollectionView {
     return [offset, endOffset]
   }
 
-  // TODO: make getter
   private getOffsets(position: NumberTuple): [NumberTuple, NumberTuple] {
     const [x, y] = position
     const [containerWidth, containerHeight] = this._containerSize
@@ -239,13 +236,12 @@ export default class CollectionView {
     return layout.getIndices(xOffsets, yOffsets, this._count, containerSize)
   }
 
-  // TODO: make getter
-  private getCurrentIndices(): number[] {
+  private get currentIndices(): number[] {
     return this.getIndices(this._layout, this._scrollPosition, this._containerSize)
   }
 
   private updateCurrentIndices(): void {
-    this.updateIndices(this.getCurrentIndices())
+    this.updateIndices(this.currentIndices)
   }
 
   private updateIndices(newIndices: number[]): void {
@@ -342,7 +338,7 @@ export default class CollectionView {
 
     // update with elements that will be visible after resize
 
-    const newContainerSize = this.getContainerSize()
+    const newContainerSize = this.currentContainerSize
     const newPosition =
       newLayout.convertPositionInSize(this._scrollPosition, newContainerSize, this._layout)
     const futureIndices = this.getIndices(newLayout, newPosition, newContainerSize)
@@ -400,7 +396,7 @@ export default class CollectionView {
   // TODO: OK to make this public?
   private animatedScrollTo(position: NumberTuple): void {
     const start = Date.now()
-    const [fromX, fromY] = this.getScrollPosition()
+    const [fromX, fromY] = this.currentScrollPosition
     const [toX, toY] = position
     const easing = CollectionView.EASING
     const scroll = () => {
@@ -532,7 +528,7 @@ export default class CollectionView {
 
     // load visible elements
 
-    const newIndices = this.getCurrentIndices()
+    const newIndices = this.currentIndices
 
     let removedOrMovedLoadOffset = 0
     let addedOrMovedLoadOffset = 0
