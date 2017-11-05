@@ -62,13 +62,13 @@ If the grid or list layouts do not fit your needs you can also
 The delegate object is responsible for defining how many items the collection view should display
 and configuring the elements corresponding to the items.
 
-- **getCount(): _Number_** (required)
+- **getCount(): _number_** (required)
 
   Return the number of items in the collection.
 
   Similar to [`UICollectionViewDataSource.collectionView(numberOfItemsInSection:)`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionViewDataSource_protocol/#//apple_ref/occ/intfm/UICollectionViewDataSource/collectionView:numberOfItemsInSection:)
 
-- **configureElement(element: _Element_, index: _Number_)** (required)
+- **configureElement(element: _Element_, index: _number_)** (required)
 
   Configure the DOM element that corresponds to the item in the collection at the given index.
   The element might have previously been used to represent another item in the collection,
@@ -91,7 +91,7 @@ The collection view supports transitions between different collections. As it is
 of the underlying data itself, the changes have to be provided to the collection view explicitly,
 in the form of the indices of the items which were removed, added, and moved, passed to the method:
 
-**changeIndices(removed: _Array_, added: _Array_, moved: _Object_)**
+**changeIndices(removed: _number[]_, added: _number[]_, moved: _Map.<number, number>_)**
 
 * **removed:**
 
@@ -104,7 +104,9 @@ in the form of the indices of the items which were removed, added, and moved, pa
 * **moved:**
 
   Indices which were moved. The keys are indices referring to the collection before the changes,
-  and the values are indices referring to the collection after the changes
+  and the values are indices referring to the collection after the changes. 
+
+  May also be passed as an _Object.<string, number>_
 
 ![](demo/change-data.gif)
 
@@ -147,19 +149,19 @@ one row or column (depending on the direction) to the next.
 It is similar to [`UICollectionViewFlowLayout`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionViewFlowLayout_class/).
 
 
-* **direction: _GridLayout.Direction_**
+* **direction: _GridLayoutDirection_**
 
-  The direction in which the collection view scrolls. If `GridLayout.Direction.VERTICAL`,
+  The direction in which the collection view scrolls. If `GridLayoutDirection.VERTICAL`,
   the collection view scrolls vertically and items flow in rows from left to right.
-  If `GridLayout.Direction.HORIZONTAL`, the collection view scrolls horizontally and items
+  If `GridLayoutDirection.HORIZONTAL`, the collection view scrolls horizontally and items
   flow in columns from top to bottom.
 
-  Default: `GridLayout.Direction.VERTICAL`
+  Default: `GridLayoutDirection.VERTICAL`
 
   Similar to [`UICollectionViewFlowLayout.scrollDirection`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionViewFlowLayout_class/#//apple_ref/occ/instp/UICollectionViewFlowLayout/scrollDirection)
 
 
-* **itemSize: _Array_**
+* **itemSize: _number[]_**
 
   The size of each item. When the direction is vertical, it specifies the width and height.
   When it is horizontal, it specifies height and width.
@@ -169,7 +171,7 @@ It is similar to [`UICollectionViewFlowLayout`](https://developer.apple.com/libr
   Similar to [`UICollectionViewFlowLayout.itemSize`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionViewFlowLayout_class/#//apple_ref/occ/instp/UICollectionViewFlowLayout/itemSize)
 
 
-* **spacing: _Array_**
+* **spacing: _number[]_**
 
   The spacing between the items. When the direction is vertical, it specifies the spacing
   between the columns and rows. When it is horizontal, it specifies the spacing between
@@ -181,7 +183,7 @@ It is similar to [`UICollectionViewFlowLayout`](https://developer.apple.com/libr
   [`UICollectionViewFlowLayout.minimumLineSpacing`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionViewFlowLayout_class/#//apple_ref/occ/instp/UICollectionViewFlowLayout/minimumLineSpacing)
 
 
-* **insets: _Array[Array]_**
+* **insets: _number[][]_**
 
   The insets (padding) of the whole content. When the direction is vertical, it specifies
   the left and right, top and bottom insets. When it is horizontal, it specifies the top and
@@ -196,7 +198,7 @@ It is similar to [`UICollectionViewFlowLayout`](https://developer.apple.com/libr
 
 The `ListLayout` displays collection items in a list. All items have the same height.
 
-* **rowHeight: _Number_**
+* **rowHeight: _number_**
 
   The height of each row.
 
@@ -208,7 +210,7 @@ The `ListLayout` displays collection items in a list. All items have the same he
 The collection view supports transitions between different layouts. Simply instantiate a new
 layout, configure it, and call:
 
-**updateLayout(newLayout: _Layout_)**
+**updateLayout(newLayout: _CollectionViewLayout_)**
 
 For example, this allows changing the item size or direction of a [grid layout](#grid-layout).
 The collection view properly maintains the position in the collection.
@@ -226,18 +228,18 @@ to implement a custom layout, as the [grid](#grid-layout) and [list layout](#lis
 be sufficient in most use-cases. Still, if another layout is desired, the following methods need
 to be implemented:
 
-- **getContentSize(count: _Number_, containerSize: _Number_): _Array_**
+- **getContentSize(count: _number_, containerSize: _number[]_): _number[]_** (required)
 
   Return the width and height of all the content, not just the content that is currently visible.
 
   Similar to [`UICollectionViewLayout.collectionViewContentSize()`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionViewLayout_class/#//apple_ref/occ/instm/UICollectionViewLayout/collectionViewContentSize)
 
-- **updateContainerSize(containerSize: _Array_)**
+- **updateContainerSize(containerSize: _number[]_)** (optional)
 
   Informs the layout about the new size of the container. Might be used to recalculate positioning
   information.
 
-- **getIndices(xOffsets: _Array_, yOffsets: _Array_, count: _Number_, containerSize: _Array_): _Array_**
+- **getIndices(xOffsets: _number[]_, yOffsets: _number[]_, count: _number_, containerSize: _number[]_): _number[]_** (required)
 
   Return an array of the visible indices in the region given by the offsets, where each offset
   array contains the start and end offset. The specified container size might be different from
@@ -246,18 +248,18 @@ to be implemented:
 
   Similar to [`UICollectionViewLayout.layoutAttributesForElementsInRect()`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionViewLayout_class/#//apple_ref/occ/instm/UICollectionViewLayout/layoutAttributesForElementsInRect:)
 
-- **getElementPosition(index: _Number_): _Array_**
+- **getElementPosition(index: _number_): _number[]_** (required)
 
   Return the top-left position of the element representing the item at the specified index in
   the collection.
 
   Similar to [`UICollectionViewLayout.layoutAttributesForItemAtIndexPath()`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionViewLayout_class/#//apple_ref/occ/instm/UICollectionViewLayout/layoutAttributesForItemAtIndexPath:)
 
-- **configureElement(element: _Element_, index: _Number_)**
+- **configureElement(element: _Element_, index: _number_)** (required)
 
   Apply visual details to the element, e.g., set the size.
 
-- **convertPositionInSize(position: _Array_, newContainerSize: _Array_, oldLayout: _Layout_): _Array_**
+- **convertPositionInSize(position: _number[]_, newContainerSize: _number[]_, oldLayout: _CollectionViewLayout_): _number[]_** (required)
 
   Calculate the new scroll position for the given current scroll position in the given layout.
   The old layout may be of another type. Used to maintain the current scroll position in the
@@ -266,34 +268,35 @@ to be implemented:
 
 ## Collection view
 
-* **contentSize: _Array[Int]_**
+* **contentSize: _number[]_**
 
   The size of the scrolled content. Computed by the layout based on the data returned from the delegate.
 
   Similar to [`UIScrollView.contentSize`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UIScrollView_Class/index.html#//apple_ref/occ/instm/UIScrollView/contentSize)
 
-* **containerSize: _Array[Int]_**
+* **containerSize: _number[]_**
 
   The size of the container wrapping the scrolled content.
 
-* **scrollPosition: _Array[Int]_**
+* **scrollPosition: _number[]_**
 
   The point at which the origin of the content is offset from the origin of the collection view.
 
   Similar to [`UIScrollView.contentOffset`](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UIScrollView_Class/index.html#//apple_ref/occ/instp/UIScrollView/contentOffset)
 
-* **thresholds: _Object_**
+* **thresholds: _object_**
 
   Specifies the additional values by which the region is extended that is used to determine
-  the visible elements. A value needs to be specified for each property in
-  `CollectionView.THRESHOLD_PROPERTIES`. Increasing the values leads to more elements staying
-  attached to the scroll element. This improves appearance, as elements are already properly
+  the visible elements. Increasing the values leads to more elements staying attached 
+  to the scroll element. This improves appearance, as elements are already properly
   positioned and configured when they are becoming visible to the user. However, it is also
   likely to reduce scroll performance, as more elements need to be rendered by the browser.
 
+  Keys: `left`, `top`, `right`, and `bottom`. 
+
   Default: all values are `CollectionView.DEFAULT_THRESHOLD`
 
-* **animationDuration: _Number_**
+* **animationDuration: _number_**
 
   Specifies how long animations take. Also needs to be set as the elements'
   `transition-duration`.
@@ -302,7 +305,7 @@ to be implemented:
 
   *Note*: Is likely not going to be needed in the future.
 
-* **repositioningClassName: _String_**
+* **repositioningClassName: _string_**
 
   Class name which is applied to elements while they are being repositioned.
 
@@ -310,7 +313,7 @@ to be implemented:
 
   *Note*: Is likely going to be changed to a delegate method in the future.
 
-* **appearingClassName: _String_**
+* **appearingClassName: _string_**
 
   Class name which is applied to elements while they are appearing.
 
@@ -318,7 +321,7 @@ to be implemented:
 
   *Note*: Is likely going to be changed to a delegate method in the future.
 
-* **disappearingClassName: _String_**
+* **disappearingClassName: _string_**
 
   Class name which is applied to elements while they are disappearing.
 
