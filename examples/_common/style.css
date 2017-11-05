@@ -6,9 +6,10 @@
 }
 
 html, body {
+    margin-top: 1em;
     height: 100%;
     overflow: hidden;
-    position:fixed;
+    position: fixed;
     width: 100%;
 }
 

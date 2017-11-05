@@ -1,12 +1,10 @@
 
-import { CollectionView, GridLayout } from '../../../src'
+import { CollectionView, GridLayout } from '../../../dist'
 import style from '../../_common/style.css'
 import './style.css'
 
 
 class Delegate {
-
-  static LOAD_THRESHOLD = 1000
 
   constructor(items) {
     this.items = items
@@ -36,7 +34,7 @@ class Delegate {
     setTimeout(() => {
       this.addMore(view)
       this.loadingMore = false
-    }, 2000)
+    }, Delegate.DELAY)
   }
 
   addMore(view) {
@@ -51,6 +49,10 @@ class Delegate {
   }
 
 }
+
+Delegate.LOAD_THRESHOLD = 1000
+Delegate.DELAY = 2000
+
 
 window.onload = function () {
   const scrollElement = document.getElementById('scroll')
