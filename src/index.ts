@@ -1,13 +1,16 @@
-import CollectionView from './collection-view'
-import GridLayout from './grid-layout'
+import CollectionView, { CollectionViewDelegate, CollectionViewParameters, CollectionViewThresholds } from './collection-view'
+import GridLayout, { GridLayoutDirection, GridLayoutParameters } from './grid-layout'
 import CollectionViewLayout from './layout'
 import ListLayout from './list-layout'
-
-// TODO: delegate
 
 export {
   CollectionView,
   CollectionViewLayout,
+  CollectionViewDelegate,
+  CollectionViewParameters,
+  CollectionViewThresholds,
   GridLayout,
+  GridLayoutDirection,
+  GridLayoutParameters,
   ListLayout
 }

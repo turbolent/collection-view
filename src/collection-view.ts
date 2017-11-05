@@ -34,8 +34,8 @@ function coalesce<T>(value: T | undefined | null, defaultValue: T): T {
 
 export interface CollectionViewDelegate {
   getCount(): number
-  onScroll?(collectionView: CollectionView): void
   configureElement(element: HTMLElement, index: number): void
+  onScroll?(collectionView: CollectionView): void
 }
 
 export interface CollectionViewThresholds {
