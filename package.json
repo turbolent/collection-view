@@ -19,8 +19,8 @@
     "examples/"
   ],
   "scripts": {
-    "build": "webpack -p",
-    "prepublishOnly": "npm run build",
+    "buildProduction": "webpack --env production",
+    "prepublishOnly": "npm run buildProduction",
     "lint": "tslint -c tslint.json 'src/**/*.ts'"
   },
   "dependencies": {
