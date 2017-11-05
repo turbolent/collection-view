@@ -86,13 +86,8 @@ export default class CollectionView {
   constructor(content: HTMLElement,
               layout: CollectionViewLayout,
               delegate: CollectionViewDelegate,
-              {
-                animationDuration,
-                repositioningClassName,
-                appearingClassName,
-                disappearingClassName,
-                thresholds
-              }: CollectionViewParameters = {}) {
+              parameters: CollectionViewParameters = {}) {
+
     this.content = content
     content.classList.add(style.content)
     this._layout = layout
@@ -103,18 +98,16 @@ export default class CollectionView {
     this._container = container as any as HTMLElement
     this._container.classList.add(style.container)
 
-    this.animationDuration = coalesce(animationDuration,
+    this.animationDuration = coalesce(parameters.animationDuration,
                                       CollectionView.DEFAULT_ANIMATION_DURATION)
-    this.repositioningClassName = coalesce(repositioningClassName,
+    this.repositioningClassName = coalesce(parameters.repositioningClassName,
                                            CollectionView.DEFAULT_REPOSITIONING_CLASS_NAME)
-    this.appearingClassName = coalesce(appearingClassName,
+    this.appearingClassName = coalesce(parameters.appearingClassName,
                                        CollectionView.DEFAULT_APPEARING_CLASS_NAME)
-    this.disappearingClassName = coalesce(disappearingClassName,
+    this.disappearingClassName = coalesce(parameters.disappearingClassName,
                                           CollectionView.DEFAULT_DISAPPEARING_CLASS_NAME)
 
-    if (!thresholds) {
-      thresholds = {}
-    }
+    const thresholds = parameters.thresholds || {}
     this.thresholds = {
       left: coalesce(thresholds.left, CollectionView.DEFAULT_THRESHOLD),
       top: coalesce(thresholds.top, CollectionView.DEFAULT_THRESHOLD),
