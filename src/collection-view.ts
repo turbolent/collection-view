@@ -77,7 +77,7 @@ export default class CollectionView {
   // TODO: add getter
   private scrollPosition: NumberTuple = [0, 0]
   private count: number = 0
-  private elements: Map<number, HTMLElement>
+  private elements = new Map<number, HTMLElement>()
   private visibleIndices: number[] = []
   private onResize: () => void
 
