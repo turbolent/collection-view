@@ -2,7 +2,8 @@
 
 A container for displaying large ordered collections of data items and presenting them using
 arbitrary layouts. Large collections can be scrolled smoothly by displaying only a limited
-number of elements. [Changes to the data](#changing-the-data) (remove, add, move) and
+number of elements. This is also known as "windowing" or "virtualization".
+[Changes to the data](#changing-the-data) (remove, add, move) and
 [changes to the layout](#changing-the-layout) are properly animated by the collection view.
 The library is inspired by iOS'
 [UICollectionView](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UICollectionView_class/)
@@ -40,7 +41,7 @@ class Delegate {
   }
 }
 
-let items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+let items = ["Item 1", "Item 2", "Item 3", "Item 4", "Item 5", "Item 6", "Item 7", "Item 8", "Item 9", "Item 10"]
 let delegate = new Delegate(items)
 let layout = new GridLayout()
 let contentElement = document.getElementById('content')
