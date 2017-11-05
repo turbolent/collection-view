@@ -9,6 +9,7 @@
     "url": "https://github.com/turbolent/collection-view.git"
   },
   "main": "dist/index.js",
+  "types": "dist/declarations/index.d.ts",
   "module": "src/index.js",
   "files": [
     "README.md",
