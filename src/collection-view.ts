@@ -1,7 +1,7 @@
 import CollectionViewLayout from './layout'
 import style from './style.css'
 import { NumberTuple } from './types'
-import { unique, coalesce, sort } from './utils'
+import { coalesce, sort, unique } from './utils'
 
 import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
@@ -60,7 +60,7 @@ export default class CollectionView {
   private _onResize: () => void
   private _container: HTMLElement
   private _layout: CollectionViewLayout
-  
+
   readonly content: HTMLElement
   readonly delegate: CollectionViewDelegate
 
@@ -99,7 +99,7 @@ export default class CollectionView {
 
     const container = content.parentElement
     if (container === null) {
-      throw new InvalidArgumentError("Content element should be contained in a container element")
+      throw new InvalidArgumentError('Content element should be contained in a container element')
     }
     this._container = container as HTMLElement
     this._container.classList.add(style.container)
@@ -128,7 +128,7 @@ export default class CollectionView {
     this.onScroll = this.onScroll.bind(this)
 
     this._onResize = throttle(() => this.resize(),
-      coalesce(parameters.resizeThrottleDuration, 
+      coalesce(parameters.resizeThrottleDuration,
                CollectionView.DEFAULT_RESIZE_THROTTLE),
       {leading: false})
 

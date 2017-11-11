@@ -15,7 +15,9 @@
     "noEmitOnError": true,
     "declaration": true,
     "declarationDir": "declarations",
-    "noResolve": false
+    "noResolve": false,
+    "noUnusedLocals": true,
+    "forceConsistentCasingInFileNames": true
   },
   "filesGlob": ["**/*.ts", "!node_modules/**/*"],
   "exclude": ["node_modules"]

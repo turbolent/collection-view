@@ -17,7 +17,8 @@
       "check-format",
       "allow-pascal-case",
       "allow-leading-underscore"
-    ]
+    ],
+    "max-classes-per-file": false
   },
   "rulesDirectory": []
 }
