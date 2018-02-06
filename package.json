@@ -1,6 +1,6 @@
 {
   "name": "collection-view",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "author": "Bastian Müller <bastian@turbolent.com>",
   "description": "UICollectionView for the web",
@@ -19,7 +19,7 @@
     "examples/"
   ],
   "scripts": {
-    "buildProduction": "webpack --env production",
+    "buildProduction": "webpack --env production --progress --profile --colors",
     "prepublishOnly": "npm run buildProduction",
     "lint": "tslint -c tslint.json 'src/**/*.ts'"
   },
