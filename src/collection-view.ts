@@ -146,7 +146,7 @@ export default class CollectionView {
     this.updateCurrentIndices()
   }
 
-  public uninstall(): void {
+  public uninstall(elementHandler?: (element: HTMLElement) => void): void {
     this._installed = false
 
     this.content.classList.remove(style.content)
@@ -156,6 +156,11 @@ export default class CollectionView {
     this._container.removeEventListener('scroll', this.onScroll, false)
 
     window.removeEventListener('resize', this._onResize, false)
+
+    if (elementHandler) {
+      this._elements.forEach((element) =>
+                                 elementHandler(element))
+    }
 
     this._elements.forEach((element) => {
       const parent = element.parentElement
