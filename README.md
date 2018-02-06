@@ -336,3 +336,7 @@ to be implemented:
 The `examples` directory contains several examples demonstrating the features
 of the collection view. To try them out, go to each subdirectory, run `webpack`
 and open the `index.html`.
+
+## React
+
+For usage with React, see `examples/react`.
