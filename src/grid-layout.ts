@@ -84,11 +84,11 @@ export default class GridLayout implements CollectionViewLayout {
     const itemAndSpacing = this.itemSize[this.direction] + spacing
     const availableSpace = this.containerSizeConstraint - startInset - endInset
     const diff = availableSpace + spacing - this.itemCount * itemAndSpacing
-    const otherspacing = this.spacing[otherDirection]
-    const otherItemAndspacing = this.itemSize[otherDirection] + otherspacing
+    const otherSpacing = this.spacing[otherDirection]
+    const otherItemAndSpacing = this.itemSize[otherDirection] + otherSpacing
     const result: NumberTuple = [0, 0]
     result[this.direction] = startInset + itemIndex * itemAndSpacing + Math.max(0, diff / 2)
-    result[otherDirection] = otherStartInset + sectionIndex * otherItemAndspacing
+    result[otherDirection] = otherStartInset + sectionIndex * otherItemAndSpacing
     return result
   }
 
