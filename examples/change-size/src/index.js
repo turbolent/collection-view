@@ -20,9 +20,8 @@ class Delegate {
 }
 
 function newLayout(large) {
-  const layout = new GridLayout()
-  layout.itemSize = large ? [260, 260] : [180, 180]
-  return layout
+  const itemSize = large ? [260, 260] : [180, 180]
+  return new GridLayout({itemSize})
 }
 
 window.onload = function () {
