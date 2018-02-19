@@ -294,7 +294,7 @@ export default class CollectionView {
 
   private positionElement(layout: CollectionViewLayout, element: HTMLElement, index: number): void {
     element.style.zIndex = `${index + 1}`
-    const [x, y] = layout.getElementPosition(index)
+    const [x, y] = layout.getElementPosition(index).map(Math.round)
     element.style.transform = `translate3d(${x}px, ${y}px, 0)`
   }
 
@@ -353,8 +353,8 @@ export default class CollectionView {
     // temporarily shift position of visible elements and scroll
     // to future position, so elements appear to "stay"
 
-    const diffX = newPosition[0] - this._scrollPosition[0]
-    const diffY = newPosition[1] - this._scrollPosition[1]
+    const diffX = Math.round(newPosition[0] - this._scrollPosition[0])
+    const diffY = Math.round(newPosition[1] - this._scrollPosition[1])
 
     if (diffX || diffY) {
       this._elements.forEach((element) =>
