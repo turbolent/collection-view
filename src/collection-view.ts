@@ -11,6 +11,7 @@ const TRANSITION_END_EVENT = 'transitionend'
 export interface CollectionViewDelegate {
   getCount(): number
   configureElement(element: HTMLElement, index: number): void
+  invalidateElement?(element: HTMLElement, index: number): void
   onScroll?(collectionView: CollectionView): void
 }
 
@@ -162,12 +163,8 @@ export default class CollectionView {
                                  elementHandler(element))
     }
 
-    this._elements.forEach((element) => {
-      const parent = element.parentElement
-      if (parent) {
-        parent.removeChild(element)
-      }
-    })
+    this._elements.forEach((element) =>
+                             this.removeElement(element))
   }
 
   private get currentContainerSize(): NumberTuple {
@@ -249,8 +246,9 @@ export default class CollectionView {
     this.updateIndices(this.currentIndices)
   }
 
+  // update elements when viewport changes (e.g. when scrolling)
   private updateIndices(newIndices: number[]): void {
-    // determine old elements
+    // determine old elements. save invalid elements so they can be reused
     const invalidElements: HTMLElement[] = []
 
     this._elements.forEach((element, index) => {
@@ -259,6 +257,10 @@ export default class CollectionView {
       }
 
       this._elements.delete(index)
+      if (this.delegate.invalidateElement) {
+        this.delegate.invalidateElement(element, index)
+      }
+
       invalidElements.push(element)
     })
 
@@ -266,6 +268,7 @@ export default class CollectionView {
     const currentIndices = this._visibleIndices
     newIndices.filter((index) => currentIndices.indexOf(index) < 0)
               .forEach((index) => {
+                // reuse one of the invalid/old elements, or create a new element
                 const element = invalidElements.pop()
                   || this.createAndAddElement()
                 this.configureElement(this._layout, element, index)
@@ -280,10 +283,7 @@ export default class CollectionView {
       if (element == null) {
         return
       }
-      const parent = element.parentElement
-      if (parent) {
-        parent.removeChild(element)
-      }
+      this.removeElement(element)
     })
   }
 
@@ -384,6 +384,8 @@ export default class CollectionView {
       }
 
       setTimeout(() => {
+        this.updateIndices(futureIndices)
+
         if (completion) {
           completion()
         }
@@ -418,6 +420,15 @@ export default class CollectionView {
     }
 
     requestAnimationFrame(scroll)
+  }
+
+  private removeElement(element: HTMLElement) {
+    const parent = element.parentElement
+    if (!parent) {
+      return;
+    }
+
+    parent.removeChild(element)
   }
 
   public changeIndices(removedIndices: number[], addedIndices: number[], movedIndexMap: Map<number, number>): void {
@@ -489,12 +500,16 @@ export default class CollectionView {
 
       element.classList.add(this.disappearingClassName)
       element.style.zIndex = '0'
+
+      // NOTE: notify delegate about invalidation after element was removed
+      // (animation finished), not immediately when stopping to keep track of it
       setTimeout(() => {
-          const parent = element.parentElement
-          if (parent) {
-            parent.removeChild(element)
-          }
-        }, this.animationDuration)
+                   this.removeElement(element)
+                   if (this.delegate.invalidateElement) {
+                     this.delegate.invalidateElement(element, index)
+                   }
+                 },
+                 this.animationDuration)
       this._elements.delete(index)
     })
 
