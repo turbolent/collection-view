@@ -21,7 +21,9 @@
   "scripts": {
     "buildProduction": "webpack --env production --progress --profile --colors",
     "prepublishOnly": "npm run buildProduction",
-    "lint": "tslint -c tslint.json 'src/**/*.ts'"
+    "lint": "tslint -c tslint.json 'src/**/*.ts'",
+    "buildTestEnv": "webpack --context tests/env --config tests/env/webpack.config.js",
+    "test": "npm run buildTestEnv && jest"
   },
   "dependencies": {
     "@types/bezier-easing": "2.0.x",
@@ -30,12 +32,29 @@
     "lodash-es": "^4.17.4"
   },
   "devDependencies": {
+    "@types/jest": "^22.1.4",
+    "@types/puppeteer": "^1.0.1",
     "babel-minify-webpack-plugin": "0.2.x",
     "css-loader": "0.28.x",
+    "jest": "^22.4.2",
+    "puppeteer": "^1.1.1",
     "style-loader": "0.19.x",
     "ts-loader": "3.1.x",
     "tslint": "5.8.x",
     "typescript": "2.6.x",
     "webpack": "3.8.x"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "transform": {
+      "^.+\\.ts$": "<rootDir>/tests/preprocessor.js"
+    },
+    "testMatch": [
+      "<rootDir>/tests/*.spec.ts"
+    ],
+    "verbose": true
   }
 }
