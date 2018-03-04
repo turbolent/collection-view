@@ -91,7 +91,7 @@ The collection view supports transitions between different collections. As it is
 of the underlying data itself, the changes have to be provided to the collection view explicitly,
 in the form of the indices of the items which were removed, added, and moved, passed to the method:
 
-**changeIndices(removed: _number[]_, added: _number[]_, moved: _Map.<number, number>_)**
+**changeIndices(removed: _number[]_, added: _number[]_, moved: _Map.<number, number>_): Promise**
 
 * **removed: _number[]_**
 
@@ -211,7 +211,7 @@ The `ListLayout` displays collection items in a list. All items have the same he
 The collection view supports transitions between different layouts. Simply instantiate a new
 layout, configure it, and call:
 
-**updateLayout(newLayout: _CollectionViewLayout_)**
+**updateLayout(newLayout: _CollectionViewLayout_): Promise**
 
 For example, this allows changing the item size or direction of a [grid layout](#grid-layout).
 The collection view properly maintains the position in the collection.

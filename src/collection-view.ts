@@ -327,70 +327,72 @@ export default class CollectionView {
     }
     this._resizing = true
 
-    this.updateLayout(this._layout, () => {
-      this._resizing = false
+    this.updateLayout(this._layout)
+      .then(() => {
+        this._resizing = false
 
-      if (this._wantsResize) {
-        this._wantsResize = false
-        this.resize()
-      }
+        if (this._wantsResize) {
+          this._wantsResize = false
+          this.resize()
+        }
     })
   }
 
-  public updateLayout(newLayout: CollectionViewLayout, completion: () => void): void {
+  public updateLayout(newLayout: CollectionViewLayout): Promise<void> {
 
-    this._container.removeEventListener('scroll', this.onScroll, false)
+    return new Promise(resolve => {
 
-    // update with elements that will be visible after resize
+      this._container.removeEventListener('scroll', this.onScroll, false)
 
-    const newContainerSize = this.currentContainerSize
-    const newPosition =
-      newLayout.convertPositionInSize(this._scrollPosition, newContainerSize, this._layout)
-    const futureIndices = this.getIndices(newLayout, newPosition, newContainerSize)
-    const indices = unique(this._visibleIndices.concat(futureIndices))
-    this.updateIndices(indices)
+      // update with elements that will be visible after resize
 
-    // temporarily shift position of visible elements and scroll
-    // to future position, so elements appear to "stay"
+      const newContainerSize = this.currentContainerSize
+      const newPosition =
+        newLayout.convertPositionInSize(this._scrollPosition, newContainerSize, this._layout)
+      const futureIndices = this.getIndices(newLayout, newPosition, newContainerSize)
+      const indices = unique(this._visibleIndices.concat(futureIndices))
+      this.updateIndices(indices)
 
-    const diffX = Math.round(newPosition[0] - this._scrollPosition[0])
-    const diffY = Math.round(newPosition[1] - this._scrollPosition[1])
+      // temporarily shift position of visible elements and scroll
+      // to future position, so elements appear to "stay"
 
-    if (diffX || diffY) {
-      this._elements.forEach((element) =>
-        element.style.transform += ` translate3d(${diffX}px, ${diffY}px, 0)`)
-    }
+      const diffX = Math.round(newPosition[ 0 ] - this._scrollPosition[ 0 ])
+      const diffY = Math.round(newPosition[ 1 ] - this._scrollPosition[ 1 ])
 
-    this.updateContentSize(newLayout)
-
-    this.scrollTo(newPosition)
-
-    this._scrollPosition = newPosition
-
-    this.updateContainerSize(newLayout)
-
-    // reposition (NOTE: setTimeout important)
-    setTimeout(() => {
-
-      this.repositionVisibleElements(newLayout)
-
-      this._elements.forEach((element, index) =>
-        newLayout.configureElement(element, index))
-
-      this._layout = newLayout
-
-      if (this._installed) {
-        this._container.addEventListener('scroll', this.onScroll, false)
+      if (diffX || diffY) {
+        this._elements.forEach((element) =>
+                                 element.style.transform += ` translate3d(${diffX}px, ${diffY}px, 0)`)
       }
 
-      setTimeout(() => {
-        this.updateIndices(futureIndices)
+      this.updateContentSize(newLayout)
 
-        if (completion) {
-          completion()
+      this.scrollTo(newPosition)
+
+      this._scrollPosition = newPosition
+
+      this.updateContainerSize(newLayout)
+
+      // reposition (NOTE: setTimeout important)
+      setTimeout(() => {
+
+        this.repositionVisibleElements(newLayout)
+
+        this._elements.forEach((element, index) =>
+                                 newLayout.configureElement(element, index))
+
+        this._layout = newLayout
+
+        if (this._installed) {
+          this._container.addEventListener('scroll', this.onScroll, false)
         }
-      }, this.animationDuration)
-    }, 0)
+
+        setTimeout(() => {
+          this.updateIndices(futureIndices)
+
+          resolve()
+        }, this.animationDuration)
+      }, 0)
+    })
   }
 
   // TODO: OK to make this public?
@@ -431,188 +433,208 @@ export default class CollectionView {
     parent.removeChild(element)
   }
 
-  public changeIndices(removedIndices: number[], addedIndices: number[], movedIndexMap: Map<number, number>): void {
+  public changeIndices(removedIndices: number[], addedIndices: number[], movedIndexMap: Map<number, number>): Promise<void> {
+    return new Promise((resolve, reject) => {
 
-    // handle legacy Object
-    if (!(movedIndexMap instanceof Map)) {
-      const movedIndexObject = movedIndexMap as { [key: string]: any }
-      const pairs = Object.keys(movedIndexObject)
-        .map((key): [number, number] =>
-          [Number(key), Number(movedIndexObject[key])])
-      movedIndexMap = new Map<number, number>(pairs)
-    }
+      const promises: Promise<void>[] = []
 
-    this._container.removeEventListener('scroll', this.onScroll, false)
+      // handle legacy Object
+      if (!(movedIndexMap instanceof Map)) {
+        const movedIndexObject = movedIndexMap as { [key: string]: any }
+        const pairs = Object.keys(movedIndexObject)
+          .map((key): [number, number] =>
+                 [Number(key), Number(movedIndexObject[key])])
+        movedIndexMap = new Map<number, number>(pairs)
+      }
 
-    // prepare moved mapping
+      this._container.removeEventListener('scroll', this.onScroll, false)
 
-    const oldMovedIndices = Array.from(movedIndexMap.keys())
-    const reverseMovedIndexMap = new Map<number, number>()
-    oldMovedIndices.forEach((oldIndex) => {
-      // TODO: assert
-      const newIndex = movedIndexMap.get(oldIndex) as number
-      reverseMovedIndexMap.set(newIndex, oldIndex)
+      // prepare moved mapping
+
+      const oldMovedIndices = Array.from(movedIndexMap.keys())
+      const reverseMovedIndexMap = new Map<number, number>()
+      oldMovedIndices.forEach((oldIndex) => {
+        // TODO: assert
+        const newIndex = movedIndexMap.get(oldIndex) as number
+        reverseMovedIndexMap.set(newIndex, oldIndex)
+      })
+      const newMovedIndices = Array.from(reverseMovedIndexMap.keys())
+
+      // update count
+
+      this.updateCount()
+
+      const countDifference = addedIndices.length - removedIndices.length
+
+      // TODO: assert countDifference == this.count - oldCount
+
+      if (countDifference > 0) {
+        this.updateContentSize(this._layout)
+      }
+
+      // scroll if current position will be out of bounds
+
+      const [newContentWidth, newContentHeight] =
+        this._layout.getContentSize(this._count, this._containerSize)
+
+      const [containerWidth, containerHeight] = this._containerSize
+      const [scrollX, scrollY] = this._scrollPosition
+      const right = scrollX + containerWidth
+      const adjustX = right > newContentWidth
+      if (adjustX) {
+        this._scrollPosition[0] = Math.max(0, scrollX - (right - newContentWidth))
+      }
+
+      const bottom = scrollY + containerHeight
+      const adjustY = bottom > newContentHeight
+      if (adjustY) {
+        this._scrollPosition[1] = Math.max(0, scrollY - (bottom - newContentHeight))
+      }
+
+      if (adjustX || adjustY) {
+        this.animatedScrollTo(this._scrollPosition)
+      }
+
+      // disappear and remove elements
+
+      removedIndices.forEach((index) => {
+        const element = this._elements.get(index)
+        if (!element) {
+          return
+        }
+
+        element.classList.add(this.disappearingClassName)
+        element.style.zIndex = '0'
+
+        promises.push(new Promise<void>(resolve => {
+
+          // NOTE: notify delegate about invalidation after element was removed
+          // (animation finished), not immediately when stopping to keep track of it
+          setTimeout(() => {
+                       this.removeElement(element)
+                       if (this.delegate.invalidateElement) {
+                         this.delegate.invalidateElement(element, index)
+                       }
+
+                       resolve()
+                     },
+                     this.animationDuration)
+        }))
+
+        this._elements.delete(index)
+      })
+
+      // reorder visible elements
+
+      const removedOrMovedIndices = sort(removedIndices.concat(oldMovedIndices))
+      const addedOrMovedIndices = sort(addedIndices.concat(newMovedIndices))
+
+      let removedOrMovedReorderOffset = 0
+      const newElements = new Map<number, HTMLElement>()
+
+      this._elements.forEach((element, index) => {
+        let newIndex: number
+        const movedIndex = movedIndexMap.get(index)
+        if (movedIndex !== undefined) {
+          newIndex = movedIndex
+        } else {
+          while (removedOrMovedReorderOffset < removedOrMovedIndices.length
+                 && removedOrMovedIndices[removedOrMovedReorderOffset] <= index) {
+            removedOrMovedReorderOffset += 1
+          }
+
+          let addedOrMovedReorderOffset = 0
+          while (addedOrMovedReorderOffset < addedOrMovedIndices.length
+                 && (addedOrMovedIndices[addedOrMovedReorderOffset]
+                     <= index - removedOrMovedReorderOffset + addedOrMovedReorderOffset)) {
+            addedOrMovedReorderOffset += 1
+          }
+
+          newIndex = index - removedOrMovedReorderOffset + addedOrMovedReorderOffset
+        }
+
+        newElements.set(newIndex, element)
+      })
+      this._elements = newElements
+
+      // load visible elements
+
+      const newIndices = this.currentIndices
+
+      let removedOrMovedLoadOffset = 0
+      let addedOrMovedLoadOffset = 0
+
+      newIndices.forEach((index) => {
+
+        let oldIndex: number
+        const reverseMovedIndex = reverseMovedIndexMap.get(index)
+        if (reverseMovedIndex !== undefined) {
+          oldIndex = reverseMovedIndex
+        } else {
+          while (addedOrMovedLoadOffset < addedOrMovedIndices.length
+                 && addedOrMovedIndices[addedOrMovedLoadOffset] <= index) {
+            addedOrMovedLoadOffset += 1
+          }
+
+          while (removedOrMovedLoadOffset < removedOrMovedIndices.length
+                 && (removedOrMovedIndices[removedOrMovedLoadOffset]
+            <= index - addedOrMovedLoadOffset + removedOrMovedLoadOffset)) {
+            removedOrMovedLoadOffset += 1
+          }
+
+          oldIndex = index - addedOrMovedLoadOffset + removedOrMovedLoadOffset
+        }
+
+        const existingElement = this._elements.get(index)
+        if (existingElement) {
+          return
+        }
+
+        const element = this.createAndAddElement()
+        const isNew = addedIndices.indexOf(index) >= 0
+        this.configureElement(this._layout, element, index)
+        this.positionElement(this._layout, element, isNew ? index : oldIndex)
+        if (isNew) {
+          element.classList.add(this.appearingClassName)
+          // TODO: trigger restyle in a more proper way
+          // tslint:disable-next-line:no-unused-expression
+          window.getComputedStyle(element).opacity
+          element.classList.remove(this.appearingClassName)
+        }
+        this._elements.set(index, element)
+      })
+
+      this._visibleIndices = newIndices
+
+      // reposition (NOTE: setTimeout important)
+
+      promises.push(new Promise<void>(resolve => {
+
+        setTimeout(() => {
+
+          this.repositionVisibleElements(this._layout)
+
+          if (this._installed) {
+            this._container.addEventListener('scroll', this.onScroll, false)
+          }
+
+          setTimeout(() => {
+            if (countDifference < 0) {
+              this.updateContentSize(this._layout)
+            }
+
+            this.updateCurrentIndices()
+
+            resolve()
+          }, this.animationDuration)
+
+        }, 0)
+      }))
+
+      Promise.all(promises)
+        .then(() => resolve())
+        .catch(e => reject(e))
     })
-    const newMovedIndices = Array.from(reverseMovedIndexMap.keys())
-
-    // update count
-
-    this.updateCount()
-
-    const countDifference = addedIndices.length - removedIndices.length
-
-    // TODO: assert countDifference == this.count - oldCount
-
-    if (countDifference > 0) {
-      this.updateContentSize(this._layout)
-    }
-
-    // scroll if current position will be out of bounds
-
-    const [newContentWidth, newContentHeight] =
-      this._layout.getContentSize(this._count, this._containerSize)
-
-    const [containerWidth, containerHeight] = this._containerSize
-    const [scrollX, scrollY] = this._scrollPosition
-    const right = scrollX + containerWidth
-    const adjustX = right > newContentWidth
-    if (adjustX) {
-      this._scrollPosition[0] = Math.max(0, scrollX - (right - newContentWidth))
-    }
-
-    const bottom = scrollY + containerHeight
-    const adjustY = bottom > newContentHeight
-    if (adjustY) {
-      this._scrollPosition[1] = Math.max(0, scrollY - (bottom - newContentHeight))
-    }
-
-    if (adjustX || adjustY) {
-      this.animatedScrollTo(this._scrollPosition)
-    }
-
-    // disappear and remove elements
-
-    removedIndices.forEach((index) => {
-      const element = this._elements.get(index)
-      if (!element) {
-        return
-      }
-
-      element.classList.add(this.disappearingClassName)
-      element.style.zIndex = '0'
-
-      // NOTE: notify delegate about invalidation after element was removed
-      // (animation finished), not immediately when stopping to keep track of it
-      setTimeout(() => {
-                   this.removeElement(element)
-                   if (this.delegate.invalidateElement) {
-                     this.delegate.invalidateElement(element, index)
-                   }
-                 },
-                 this.animationDuration)
-      this._elements.delete(index)
-    })
-
-    // reorder visible elements
-
-    const removedOrMovedIndices = sort(removedIndices.concat(oldMovedIndices))
-    const addedOrMovedIndices = sort(addedIndices.concat(newMovedIndices))
-
-    let removedOrMovedReorderOffset = 0
-    const newElements = new Map<number, HTMLElement>()
-
-    this._elements.forEach((element, index) => {
-      let newIndex: number
-      const movedIndex = movedIndexMap.get(index)
-      if (movedIndex !== undefined) {
-        newIndex = movedIndex
-      } else {
-        while (removedOrMovedReorderOffset < removedOrMovedIndices.length
-               && removedOrMovedIndices[removedOrMovedReorderOffset] <= index) {
-          removedOrMovedReorderOffset += 1
-        }
-
-        let addedOrMovedReorderOffset = 0
-        while (addedOrMovedReorderOffset < addedOrMovedIndices.length
-               && (addedOrMovedIndices[addedOrMovedReorderOffset]
-                   <= index - removedOrMovedReorderOffset + addedOrMovedReorderOffset)) {
-          addedOrMovedReorderOffset += 1
-        }
-
-        newIndex = index - removedOrMovedReorderOffset + addedOrMovedReorderOffset
-      }
-
-      newElements.set(newIndex, element)
-    })
-    this._elements = newElements
-
-    // load visible elements
-
-    const newIndices = this.currentIndices
-
-    let removedOrMovedLoadOffset = 0
-    let addedOrMovedLoadOffset = 0
-
-    newIndices.forEach((index) => {
-
-      let oldIndex: number
-      const reverseMovedIndex = reverseMovedIndexMap.get(index)
-      if (reverseMovedIndex !== undefined) {
-        oldIndex = reverseMovedIndex
-      } else {
-        while (addedOrMovedLoadOffset < addedOrMovedIndices.length
-               && addedOrMovedIndices[addedOrMovedLoadOffset] <= index) {
-          addedOrMovedLoadOffset += 1
-        }
-
-        while (removedOrMovedLoadOffset < removedOrMovedIndices.length
-               && (removedOrMovedIndices[removedOrMovedLoadOffset]
-                   <= index - addedOrMovedLoadOffset + removedOrMovedLoadOffset)) {
-          removedOrMovedLoadOffset += 1
-        }
-
-        oldIndex = index - addedOrMovedLoadOffset + removedOrMovedLoadOffset
-      }
-
-      const existingElement = this._elements.get(index)
-      if (existingElement) {
-        return
-      }
-
-      const element = this.createAndAddElement()
-      const isNew = addedIndices.indexOf(index) >= 0
-      this.configureElement(this._layout, element, index)
-      this.positionElement(this._layout, element, isNew ? index : oldIndex)
-      if (isNew) {
-        element.classList.add(this.appearingClassName)
-        // TODO: trigger restyle in a more proper way
-        // tslint:disable-next-line:no-unused-expression
-        window.getComputedStyle(element).opacity
-        element.classList.remove(this.appearingClassName)
-      }
-      this._elements.set(index, element)
-    })
-
-    this._visibleIndices = newIndices
-
-    // reposition (NOTE: setTimeout important)
-
-    setTimeout(() => {
-
-      this.repositionVisibleElements(this._layout)
-
-      if (this._installed) {
-        this._container.addEventListener('scroll', this.onScroll, false)
-      }
-
-      setTimeout(() => {
-        if (countDifference < 0) {
-          this.updateContentSize(this._layout)
-        }
-
-      }, this.animationDuration)
-
-    }, 0)
   }
 
 }

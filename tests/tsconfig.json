@@ -1,13 +1,12 @@
 {
   "compilerOptions": {
-    "outDir": "./dist/",
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
-    "module": "es6",
+    "module": "commonjs",
     "target": "es5",
-    "lib": ["es6", "dom"],
+    "lib": ["es6"],
     "allowJs": false,
     "pretty": true,
     "noImplicitReturns": true,
@@ -18,8 +17,6 @@
     "noResolve": false,
     "noUnusedLocals": true,
     "forceConsistentCasingInFileNames": true
-  },
-  "filesGlob": ["src/**/*.ts", "!node_modules/**/*"],
-  "exclude": ["node_modules", "tests"]
+  }
 }
 
