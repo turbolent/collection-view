@@ -7,7 +7,7 @@ branches:
   only:
     - master
 
-script: npm run buildProduction && npm test
+script: npm run buildProduction && npm test -- --runInBand
 
 cache:
   directories:

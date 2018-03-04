@@ -4,6 +4,8 @@ import { CollectionViewDelegate, GridLayoutParameters } from '../src'
 import CollectionView from '../src/collection-view'
 import GridLayout from '../src/grid-layout'
 
+jest.setTimeout(10000);
+
 let page: Page;
 let browser: Browser;
 const width = 1024;
