@@ -15,6 +15,8 @@ beforeAll(async () => {
                            slowMo: 200,
                            args: [
                              `--window-size=${width},${height}`,
+                             '--no-sandbox',
+                             '--disable-setuid-sandbox'
                            ]
                          });
 })
