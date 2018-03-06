@@ -57,6 +57,7 @@ export default class CollectionView {
   private _scrollPosition: NumberTuple = [0, 0]
   private _count: number = 0
   private _elements = new Map<number, HTMLElement>()
+  private _positions = new WeakMap<HTMLElement, NumberTuple>()
   private _visibleIndices: number[] = []
   private _onResize: () => void
   private _container: HTMLElement
@@ -256,6 +257,8 @@ export default class CollectionView {
       }
 
       this._elements.delete(index)
+      this._positions.delete(element)
+
       if (this.delegate.invalidateElement) {
         this.delegate.invalidateElement(element, index)
       }
@@ -295,6 +298,7 @@ export default class CollectionView {
     element.style.zIndex = `${index + 1}`
     const [x, y] = layout.getElementPosition(index).map(Math.round)
     element.style.transform = `translate3d(${x}px, ${y}px, 0)`
+    this._positions.set(element, position)
   }
 
   private createAndAddElement(): HTMLElement {
@@ -517,6 +521,7 @@ export default class CollectionView {
         }))
 
         this._elements.delete(index)
+        this._positions.delete(element)
       })
 
       // reorder visible elements
