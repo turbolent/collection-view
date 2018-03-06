@@ -1,6 +1,6 @@
 import CollectionViewLayout from './layout'
 import style from './style.css'
-import { NumberTuple } from './types'
+import { Line, NumberTuple } from './types'
 import { coalesce, sort, unique } from './utils'
 
 import * as BezierEasing from 'bezier-easing'
@@ -269,15 +269,15 @@ export default class CollectionView {
     // add missing elements
     const currentIndices = this._visibleIndices
     newIndices.filter((index) => currentIndices.indexOf(index) < 0)
-              .forEach((index) => {
-                // reuse one of the invalid/old elements, or create a new element
-                const element = invalidElements.pop()
-                  || this.createAndAddElement()
-                this.configureElement(this._layout, element, index)
-                this.positionElement(this._layout, element, index)
-                element.classList.remove(this.repositioningClassName)
-                this._elements.set(index, element)
-              })
+      .forEach((index) => {
+        // reuse one of the invalid/old elements, or create a new element
+        const element = invalidElements.pop()
+          || this.createAndAddElement()
+        this.configureElement(this._layout, element, index)
+        this.getAndApplyElementPosition(this._layout, element, index)
+        element.classList.remove(this.repositioningClassName)
+        this._elements.set(index, element)
+      })
     this._visibleIndices = newIndices
 
     // actually remove old elements, which weren't reused
@@ -294,11 +294,21 @@ export default class CollectionView {
     layout.configureElement(element, index)
   }
 
-  private positionElement(layout: CollectionViewLayout, element: HTMLElement, index: number): void {
+  private getElementPosition(layout: CollectionViewLayout, index: number): NumberTuple {
+    const position = layout.getElementPosition(index)
+    return position.map(Math.round) as NumberTuple
+  }
+
+  private applyElementPosition(element: HTMLElement, position: NumberTuple, index: number): void {
+    const [x, y] = position
     element.style.zIndex = `${index + 1}`
-    const [x, y] = layout.getElementPosition(index).map(Math.round)
     element.style.transform = `translate3d(${x}px, ${y}px, 0)`
     this._positions.set(element, position)
+  }
+
+  private getAndApplyElementPosition(layout: CollectionViewLayout, element: HTMLElement, index: number): void {
+    const position = this.getElementPosition(layout, index)
+    this.applyElementPosition(element, position, index)
   }
 
   private createAndAddElement(): HTMLElement {
@@ -308,9 +318,37 @@ export default class CollectionView {
     return element
   }
 
+  // TODO: assumes sizes are constant
   private repositionVisibleElements(layout: CollectionViewLayout): void {
 
     this._elements.forEach((element, index) => {
+
+      const newPosition = this.getElementPosition(layout, index)
+      const currentPosition = this._positions.get(element)
+
+      if (!currentPosition) {
+        throw Error("missing position for element: " + element)
+      }
+
+      if (newPosition[0] == currentPosition[0]
+        && newPosition[1] == currentPosition[1]) {
+        return
+      }
+
+      const size: NumberTuple = [element.offsetWidth, element.offsetHeight]
+
+      const improvedPositions =
+        this.getImprovedPositions(currentPosition, newPosition, size)
+
+      if (typeof improvedPositions !== 'undefined') {
+        const improvedStartPosition = improvedPositions[0]
+        if (typeof improvedStartPosition !== 'undefined') {
+          this.applyElementPosition(element, improvedStartPosition, index)
+        }
+      }
+
+      element.getBoundingClientRect()
+
       const onTransitionEnd = () => {
         element.removeEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
         element.classList.remove(this.repositioningClassName)
@@ -319,8 +357,142 @@ export default class CollectionView {
       element.addEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
       element.classList.add(this.repositioningClassName)
 
-      this.positionElement(layout, element, index)
+      let improvedEndPosition
+      if (typeof improvedPositions !== 'undefined') {
+        improvedEndPosition = improvedPositions[1]
+      }
+
+      const endPosition = typeof improvedEndPosition !== 'undefined'
+        ? improvedEndPosition
+        : newPosition
+      this.applyElementPosition(element, endPosition, index)
     })
+  }
+
+  private getImprovedPositions(currentPosition: NumberTuple,
+                               newPosition: NumberTuple,
+                               size: NumberTuple): [NumberTuple | undefined, NumberTuple | undefined] | undefined {
+
+    const [width, height] = size
+
+    const currentIsVisible = this.isVisible(currentPosition, size)
+    const newIsVisible = this.isVisible(newPosition, size)
+
+    const movingIn = !currentIsVisible && newIsVisible
+    const movingOut = currentIsVisible && !newIsVisible
+
+    if (!movingIn && !movingOut) {
+      return
+    }
+
+    const [ containerWidth, containerHeight ] = this._containerSize
+    const [ minX, minY ] = this._scrollPosition
+
+    const maxY = minY + containerHeight
+    const maxX = minX + containerWidth
+
+    const transitionLine: Line = [ currentPosition, newPosition ]
+
+    // TODO: make setting
+    const offset = 100
+
+    // NOTE: offsetting lines to take element size into account + some padding
+
+    // check bottom
+
+    const adjustedBottomLine: Line = [
+      [ minX, maxY + offset ],
+      [ maxX, maxY + offset ]
+    ]
+
+    const bottomIntersectionPoint = this.intersect(transitionLine, adjustedBottomLine)
+    if (bottomIntersectionPoint) {
+      return movingIn
+        ? [bottomIntersectionPoint, undefined]
+        : [undefined, bottomIntersectionPoint]
+    }
+
+    // check top
+
+    const adjustedTopLine: Line = [
+      [ minX, minY - height - offset ],
+      [ maxX, minY - height - offset ]
+    ]
+
+    const topIntersectionPoint = this.intersect(transitionLine, adjustedTopLine)
+    if (topIntersectionPoint) {
+      return movingIn
+        ? [topIntersectionPoint, undefined]
+        : [undefined, topIntersectionPoint]
+    }
+
+    // check left
+
+    const adjustedLeftLine: Line = [
+      [ minX - width - offset, minY ],
+      [ minX - width - offset, maxY ]
+    ]
+
+    const leftIntersectionPoint = this.intersect(transitionLine, adjustedLeftLine)
+    if (leftIntersectionPoint) {
+      return movingIn
+        ? [leftIntersectionPoint, undefined]
+        : [undefined, leftIntersectionPoint]
+    }
+
+    // check right
+
+    const adjustedRightLine: Line = [ [ maxX, minY ], [ maxX, maxY ] ]
+
+    const rightIntersectionPoint = this.intersect(transitionLine, adjustedRightLine)
+    if (rightIntersectionPoint) {
+      return movingIn
+        ? [rightIntersectionPoint, undefined]
+        : [undefined, rightIntersectionPoint]
+    }
+
+    return
+  }
+
+  isVisible([minX, minY]: NumberTuple, [width, height]: NumberTuple): boolean {
+    const [ containerWidth, containerHeight ] = this._containerSize
+    const [ containerMinX, containerMinY ] = this._scrollPosition
+
+    const containerMaxX = containerMinX + containerWidth
+    const containerMaxY = containerMinY + containerHeight
+
+    const maxX = minX + width
+    const maxY = minY + height
+
+    return (
+      minX < containerMaxX
+      && maxX > containerMinX
+      && maxY > containerMinY
+      && minY < containerMaxY
+    )
+  }
+
+  intersect([[x1, y1], [x2, y2]]: Line,
+            [[x3, y3], [x4, y4]]: Line): NumberTuple | undefined {
+
+    const denominator = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+
+    // parallel?
+    if (Math.abs(denominator) <= Number.EPSILON) {
+      return
+    }
+
+    const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denominator
+    const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denominator
+
+    if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
+      return
+    }
+
+    return [
+      x1 + ua * (x2 - x1),
+      y1 + ua * (y2 - y1)
+    ]
   }
 
   private resize(): void {
@@ -559,12 +731,12 @@ export default class CollectionView {
 
       // load visible elements
 
-      const newIndices = this.currentIndices
+      const finalIndices = this.currentIndices
 
       let removedOrMovedLoadOffset = 0
       let addedOrMovedLoadOffset = 0
 
-      newIndices.forEach((index) => {
+      finalIndices.forEach((index) => {
 
         let oldIndex: number
         const reverseMovedIndex = reverseMovedIndexMap.get(index)
@@ -593,7 +765,11 @@ export default class CollectionView {
         const element = this.createAndAddElement()
         const isNew = addedIndices.indexOf(index) >= 0
         this.configureElement(this._layout, element, index)
-        this.positionElement(this._layout, element, isNew ? index : oldIndex)
+        this.getAndApplyElementPosition(this._layout, element, isNew ? index : oldIndex)
+
+        // NOTE: important, forces a relayout
+        element.getBoundingClientRect()
+
         if (isNew) {
           element.classList.add(this.appearingClassName)
           // TODO: trigger restyle in a more proper way
@@ -604,7 +780,7 @@ export default class CollectionView {
         this._elements.set(index, element)
       })
 
-      this._visibleIndices = newIndices
+      this._visibleIndices = finalIndices
 
       // reposition
 
