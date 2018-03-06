@@ -16,10 +16,10 @@ export interface CollectionViewDelegate {
 }
 
 export interface CollectionViewThresholds {
-    readonly left: number
-    readonly top: number
-    readonly right: number
-    readonly bottom: number
+  readonly left: number
+  readonly top: number
+  readonly right: number
+  readonly bottom: number
 }
 
 export interface CollectionViewParameters {
@@ -129,9 +129,9 @@ export default class CollectionView {
     this.onScroll = this.onScroll.bind(this)
 
     this._onResize = throttle(() => this.resize(),
-      coalesce(parameters.resizeThrottleDuration,
-               CollectionView.DEFAULT_RESIZE_THROTTLE),
-      {leading: false})
+                              coalesce(parameters.resizeThrottleDuration,
+                                       CollectionView.DEFAULT_RESIZE_THROTTLE),
+                              {leading: false})
 
     this._container.addEventListener('scroll', this.onScroll, false)
     window.addEventListener('resize', this._onResize, false)
@@ -160,7 +160,7 @@ export default class CollectionView {
 
     if (elementHandler) {
       this._elements.forEach((element) =>
-                                 elementHandler(element))
+                               elementHandler(element))
     }
 
     this._elements.forEach((element) =>
@@ -224,8 +224,7 @@ export default class CollectionView {
     return [offset, endOffset]
   }
 
-  private getOffsets(position: NumberTuple): [NumberTuple, NumberTuple] {
-    const [x, y] = position
+  private getOffsets([x, y]: NumberTuple): [NumberTuple, NumberTuple] {
     const [containerWidth, containerHeight] = this._containerSize
     const {left, top, right, bottom} = this.thresholds
     const xOffsets = this.getAxisOffsets(x, containerWidth, left, right)
@@ -335,7 +334,7 @@ export default class CollectionView {
           this._wantsResize = false
           this.resize()
         }
-    })
+      })
   }
 
   public updateLayout(newLayout: CollectionViewLayout): Promise<void> {
@@ -395,18 +394,14 @@ export default class CollectionView {
     })
   }
 
-  // TODO: OK to make this public?
-  private scrollTo(position: NumberTuple): void {
-    const [x, y] = position
+  public scrollTo([x, y]: NumberTuple): void {
     this._container.scrollLeft = x
     this._container.scrollTop = y
   }
 
-  // TODO: OK to make this public?
-  private animatedScrollTo(position: NumberTuple): void {
+  public animatedScrollTo([toX, toY]: NumberTuple): void {
     const start = Date.now()
     const [fromX, fromY] = this.currentScrollPosition
-    const [toX, toY] = position
     const easing = CollectionView.EASING
     const scroll = () => {
       const now = Date.now()
@@ -427,7 +422,7 @@ export default class CollectionView {
   private removeElement(element: HTMLElement) {
     const parent = element.parentElement
     if (!parent) {
-      return;
+      return
     }
 
     parent.removeChild(element)
@@ -442,7 +437,7 @@ export default class CollectionView {
       if (!(movedIndexMap instanceof Map)) {
         const movedIndexObject = movedIndexMap as { [key: string]: any }
         const pairs = Object.keys(movedIndexObject)
-          .map((key): [number, number] =>
+          .map((key): NumberTuple =>
                  [Number(key), Number(movedIndexObject[key])])
         movedIndexMap = new Map<number, number>(pairs)
       }
@@ -606,10 +601,11 @@ export default class CollectionView {
 
       this._visibleIndices = newIndices
 
-      // reposition (NOTE: setTimeout important)
+      // reposition
 
       promises.push(new Promise<void>(resolve => {
 
+        // NOTE: setTimeout important
         setTimeout(() => {
 
           this.repositionVisibleElements(this._layout)
