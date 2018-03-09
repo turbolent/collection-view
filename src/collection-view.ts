@@ -363,7 +363,10 @@ export default class CollectionView {
       const newContainerSize = this.currentContainerSize
       const newPosition =
         newLayout.convertPositionInSize(this._scrollPosition, newContainerSize, this._layout)
+
       const futureIndices = this.getIndices(newLayout, newPosition, newContainerSize)
+
+      // TODO: use range [min(visible + future), max(visible + future)] ?
       const indices = unique(this._visibleIndices.concat(futureIndices))
       this.updateIndices(indices)
 
@@ -393,7 +396,7 @@ export default class CollectionView {
 
         this._elements.forEach((element, index) => {
           assert(() => index >= 0)
-          return newLayout.configureElement(element, index)
+          newLayout.configureElement(element, index)
         })
 
         this._layout = newLayout
@@ -403,7 +406,10 @@ export default class CollectionView {
         }
 
         setTimeout(() => {
-          this.updateIndices(futureIndices)
+          // NOTE: NOT updateIndices(futureIndices):
+          // the browser might have scrolled up implicitly if the content size became smaller
+
+          this.updateCurrentIndices()
 
           resolve()
         }, this.animationDuration)
