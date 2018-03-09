@@ -36,6 +36,14 @@ export interface CollectionViewParameters {
   }
 }
 
+function assert(f: () => boolean) {
+  if (process.env.NODE_ENV !== 'production') {
+    if (!f()) {
+      throw new Error("")
+    }
+  }
+}
+
 class InvalidArgumentError extends Error {}
 
 export default class CollectionView {
@@ -252,6 +260,8 @@ export default class CollectionView {
     const invalidElements: HTMLElement[] = []
 
     this._elements.forEach((element, index) => {
+      assert(() => index >= 0)
+
       if (newIndices.indexOf(index) >= 0) {
         return
       }
@@ -274,6 +284,8 @@ export default class CollectionView {
                 this.configureElement(this._layout, element, index)
                 this.positionElement(this._layout, element, index)
                 element.classList.remove(this.repositioningClassName)
+
+                assert(() => index >= 0)
                 this._elements.set(index, element)
               })
     this._visibleIndices = newIndices
@@ -308,6 +320,8 @@ export default class CollectionView {
   private repositionVisibleElements(layout: CollectionViewLayout): void {
 
     this._elements.forEach((element, index) => {
+      assert(() => index >= 0)
+
       const onTransitionEnd = () => {
         element.removeEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
         element.classList.remove(this.repositioningClassName)
@@ -377,8 +391,10 @@ export default class CollectionView {
 
         this.repositionVisibleElements(newLayout)
 
-        this._elements.forEach((element, index) =>
-                                 newLayout.configureElement(element, index))
+        this._elements.forEach((element, index) => {
+          assert(() => index >= 0)
+          return newLayout.configureElement(element, index)
+        })
 
         this._layout = newLayout
 
@@ -498,6 +514,8 @@ export default class CollectionView {
       // disappear and remove elements
 
       removedIndices.forEach((index) => {
+        assert(() => index >= 0)
+
         const element = this._elements.get(index)
         if (!element) {
           return
@@ -536,6 +554,8 @@ export default class CollectionView {
 
       indices.forEach((index) => {
         const element = this._elements.get(index) as HTMLElement
+        assert(() => index >= 0)
+
         let newIndex: number
         const movedIndex = movedIndexMap.get(index)
         if (movedIndex !== undefined) {
@@ -556,6 +576,7 @@ export default class CollectionView {
           newIndex = index - removedOrMovedReorderOffset + addedOrMovedReorderOffset
         }
 
+        assert(() => newIndex >= 0)
         newElements.set(newIndex, element)
       })
       this._elements = newElements
@@ -588,6 +609,8 @@ export default class CollectionView {
           oldIndex = index - addedOrMovedLoadOffset + removedOrMovedLoadOffset
         }
 
+
+        assert(() => index >= 0)
         const existingElement = this._elements.get(index)
         if (existingElement) {
           return
