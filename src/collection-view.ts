@@ -532,7 +532,10 @@ export default class CollectionView {
       let removedOrMovedReorderOffset = 0
       const newElements = new Map<number, HTMLElement>()
 
-      this._elements.forEach((element, index) => {
+      const indices = sort(Array.from(this._elements.keys()))
+
+      indices.forEach((index) => {
+        const element = this._elements.get(index) as HTMLElement
         let newIndex: number
         const movedIndex = movedIndexMap.get(index)
         if (movedIndex !== undefined) {
@@ -559,7 +562,7 @@ export default class CollectionView {
 
       // load visible elements
 
-      const newIndices = this.currentIndices
+      const newIndices = sort(this.currentIndices)
 
       let removedOrMovedLoadOffset = 0
       let addedOrMovedLoadOffset = 0
