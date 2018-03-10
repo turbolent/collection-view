@@ -36,6 +36,19 @@ export interface CollectionViewParameters {
   }
 }
 
+function assert(f: () => boolean) {
+  if (process.env.NODE_ENV !== 'production') {
+    if (!f()) {
+      throw new Error("")
+    }
+  }
+}
+
+function range (min: number, max: number): number[] {
+  return Array.from(Array(max - min),
+                    (_, index) => min + index)
+}
+
 class InvalidArgumentError extends Error {}
 
 export default class CollectionView {
@@ -252,6 +265,8 @@ export default class CollectionView {
     const invalidElements: HTMLElement[] = []
 
     this._elements.forEach((element, index) => {
+      assert(() => index >= 0)
+
       if (newIndices.indexOf(index) >= 0) {
         return
       }
@@ -269,15 +284,17 @@ export default class CollectionView {
     // add missing elements
     const currentIndices = this._visibleIndices
     newIndices.filter((index) => currentIndices.indexOf(index) < 0)
-      .forEach((index) => {
-        // reuse one of the invalid/old elements, or create a new element
-        const element = invalidElements.pop()
-          || this.createAndAddElement()
-        this.configureElement(this._layout, element, index)
-        this.getAndApplyElementPosition(this._layout, element, index)
-        element.classList.remove(this.repositioningClassName)
-        this._elements.set(index, element)
-      })
+              .forEach((index) => {
+                // reuse one of the invalid/old elements, or create a new element
+                const element = invalidElements.pop()
+                  || this.createAndAddElement()
+                this.configureElement(this._layout, element, index)
+                this.getAndApplyElementPosition(this._layout, element, index)
+                element.classList.remove(this.repositioningClassName)
+
+                assert(() => index >= 0)
+                this._elements.set(index, element)
+              })
     this._visibleIndices = newIndices
 
     // actually remove old elements, which weren't reused
@@ -322,6 +339,7 @@ export default class CollectionView {
   private repositionVisibleElements(layout: CollectionViewLayout): void {
 
     this._elements.forEach((element, index) => {
+      assert(() => index >= 0)
 
       const newPosition = this.getElementPosition(layout, index)
       const currentPosition = this._positions.get(element)
@@ -524,9 +542,27 @@ export default class CollectionView {
       const newContainerSize = this.currentContainerSize
       const newPosition =
         newLayout.convertPositionInSize(this._scrollPosition, newContainerSize, this._layout)
-      const futureIndices = this.getIndices(newLayout, newPosition, newContainerSize)
-      const indices = unique(this._visibleIndices.concat(futureIndices))
-      this.updateIndices(indices)
+
+      // newPosition might not be the final scroll position:
+      // when at the bottom and the content is becoming smaller, the view is scrolled up
+
+      const finalContentSize = newLayout.getContentSize(this._count, newContainerSize)
+
+      const finalPosition: NumberTuple = [
+        newPosition[0] - Math.abs(Math.min(0, finalContentSize[0] - (newPosition[0] + newContainerSize[0]))),
+        newPosition[1] - Math.abs(Math.min(0, finalContentSize[1] - (newPosition[1] + newContainerSize[1])))
+      ]
+
+      const finalIndices = this.getIndices(newLayout, finalPosition, newContainerSize)
+
+      const combinedIndices = unique(this._visibleIndices.concat(finalIndices))
+
+      const count = combinedIndices.length
+      if (count) {
+        const min = combinedIndices.reduce((min, value) => Math.min(min, value))
+        const max = combinedIndices.reduce((max, value) => Math.max(max, value))
+        this.updateIndices(range(min, max + 1))
+      }
 
       // temporarily shift position of visible elements and scroll
       // to future position, so elements appear to "stay"
@@ -543,7 +579,7 @@ export default class CollectionView {
 
       this.scrollTo(newPosition)
 
-      this._scrollPosition = newPosition
+      this._scrollPosition = finalPosition
 
       this.updateContainerSize(newLayout)
 
@@ -552,17 +588,20 @@ export default class CollectionView {
 
         this.repositionVisibleElements(newLayout)
 
-        this._elements.forEach((element, index) =>
-                                 newLayout.configureElement(element, index))
+        this._elements.forEach((element, index) => {
+          assert(() => index >= 0)
+          newLayout.configureElement(element, index)
+        })
 
         this._layout = newLayout
 
-        if (this._installed) {
-          this._container.addEventListener('scroll', this.onScroll, false)
-        }
-
+        // TODO: don't run if layout is updated midflight
         setTimeout(() => {
-          this.updateIndices(futureIndices)
+          this.updateCurrentIndices()
+
+          if (this._installed) {
+            this._container.addEventListener('scroll', this.onScroll, false)
+          }
 
           resolve()
         }, this.animationDuration)
@@ -669,6 +708,8 @@ export default class CollectionView {
       // disappear and remove elements
 
       removedIndices.forEach((index) => {
+        assert(() => index >= 0)
+
         const element = this._elements.get(index)
         if (!element) {
           return
@@ -704,7 +745,12 @@ export default class CollectionView {
       let removedOrMovedReorderOffset = 0
       const newElements = new Map<number, HTMLElement>()
 
-      this._elements.forEach((element, index) => {
+      const indices = sort(Array.from(this._elements.keys()))
+
+      indices.forEach((index) => {
+        const element = this._elements.get(index) as HTMLElement
+        assert(() => index >= 0)
+
         let newIndex: number
         const movedIndex = movedIndexMap.get(index)
         if (movedIndex !== undefined) {
@@ -725,13 +771,14 @@ export default class CollectionView {
           newIndex = index - removedOrMovedReorderOffset + addedOrMovedReorderOffset
         }
 
+        assert(() => newIndex >= 0)
         newElements.set(newIndex, element)
       })
       this._elements = newElements
 
       // load visible elements
 
-      const finalIndices = this.currentIndices
+      const finalIndices = sort(this.currentIndices)
 
       let removedOrMovedLoadOffset = 0
       let addedOrMovedLoadOffset = 0
@@ -757,6 +804,8 @@ export default class CollectionView {
           oldIndex = index - addedOrMovedLoadOffset + removedOrMovedLoadOffset
         }
 
+
+        assert(() => index >= 0)
         const existingElement = this._elements.get(index)
         if (existingElement) {
           return
@@ -776,6 +825,9 @@ export default class CollectionView {
           // tslint:disable-next-line:no-unused-expression
           window.getComputedStyle(element).opacity
           element.classList.remove(this.appearingClassName)
+        } else {
+          // NOTE: important, forces a relayout
+          element.getBoundingClientRect()
         }
         this._elements.set(index, element)
       })
