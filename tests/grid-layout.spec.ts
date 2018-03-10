@@ -184,6 +184,57 @@ describe("Collection View with default Grid Layout", () => {
     )
   });
 
+  test("change elements at bottom", async () => {
+
+    // add initial elements
+    await page.evaluate(() => {
+      const initialElements = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      delegate.items = initialElements.slice()
+      const addedIndices = initialElements.map((_, index) => index)
+      return collectionView.changeIndices([], addedIndices, new Map())
+    })
+
+    // scroll to bottom
+    await page.evaluate(() => {
+      wrapperElement.scrollTo(0, wrapperElement.scrollHeight)
+    })
+
+    // change elements
+    await page.evaluate(() => {
+      delegate.items = [ 1, 15, 16, 3, 6, 8, 4, 10, 11, 12, 13, 14 ]
+      return collectionView.changeIndices([ 1, 4, 6, 8 ],
+                                          [ 1, 2 ],
+                                          new Map([[3, 6]]))
+    })
+
+    // check the elements were changed properly
+    await expectElements(
+      [
+        [ 80, -70, '3' ], [ 300, -70, '6' ], [ 520, -70, '8' ],
+        [ 80, 150, '4' ], [ 300, 150, '10' ], [ 520, 150, '11' ],
+        [ 80, 370, '12' ], [ 300, 370, '13' ], [ 520, 370, '14' ]
+      ],
+      [ 200, 200 ]
+    )
+
+    // change the elements back to the initial state
+    await page.evaluate(() => {
+      delegate.items = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      return collectionView.changeIndices([1, 2], [1, 4, 6, 8], new Map([[6, 3]]))
+    })
+
+    // check the elements were changed properly
+    await expectElements(
+      [
+        [ 80, -70, '4' ], [ 300, -70, '5' ], [ 520, -70, '6' ],
+        [ 80, 150, '7' ], [ 300, 150, '8' ], [ 520, 150, '9' ],
+        [ 80, 370, '10' ], [ 300, 370, '11' ], [ 520, 370, '12' ],
+        [ 80, 590, '13' ], [ 300, 590, '14' ]
+      ],
+      [ 200, 200 ]
+    )
+  });
+
   test("change layout", async () => {
 
     // add initial elements
