@@ -650,6 +650,9 @@ export default class CollectionView {
           // tslint:disable-next-line:no-unused-expression
           window.getComputedStyle(element).opacity
           element.classList.remove(this.appearingClassName)
+        } else {
+          // NOTE: important, forces a relayout
+          element.getBoundingClientRect()
         }
         this._elements.set(index, element)
       })
