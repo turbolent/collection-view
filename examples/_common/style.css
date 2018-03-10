@@ -35,9 +35,6 @@ button {
     right: 10%;
     top: 0;
     bottom: 10%;
-}
-
-:global(#scroll) {
     background-color: #f4f4f6;
 }
 
