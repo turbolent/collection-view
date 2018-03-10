@@ -336,54 +336,57 @@ export default class CollectionView {
   }
 
   // TODO: assumes sizes are constant
-  private repositionVisibleElements(layout: CollectionViewLayout): void {
+  private repositionVisibleElements(layout: CollectionViewLayout, improvePositions: boolean): void {
 
     this._elements.forEach((element, index) => {
       assert(() => index >= 0)
 
-      const newPosition = this.getElementPosition(layout, index)
+      const finalPosition = this.getElementPosition(layout, index)
       const currentPosition = this._positions.get(element)
 
       if (!currentPosition) {
         throw Error("missing position for element: " + element)
       }
 
-      if (newPosition[0] == currentPosition[0]
-        && newPosition[1] == currentPosition[1]) {
+      if (finalPosition[0] == currentPosition[0]
+          && finalPosition[1] == currentPosition[1]) {
         return
       }
 
       const size: NumberTuple = [element.offsetWidth, element.offsetHeight]
 
-      const improvedPositions =
-        this.getImprovedPositions(currentPosition, newPosition, size)
+      const improvedPositions = improvePositions
+        ? this.getImprovedPositions(currentPosition, finalPosition, size)
+        : undefined
 
       if (typeof improvedPositions !== 'undefined') {
         const improvedStartPosition = improvedPositions[0]
         if (typeof improvedStartPosition !== 'undefined') {
           this.applyElementPosition(element, improvedStartPosition, index)
+          element.getBoundingClientRect()
         }
       }
 
-      element.getBoundingClientRect()
+      let improvedEndPosition: NumberTuple | undefined
+      if (typeof improvedPositions !== 'undefined') {
+        improvedEndPosition = improvedPositions[1]
+      }
 
       const onTransitionEnd = () => {
         element.removeEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
         element.classList.remove(this.repositioningClassName)
+        if (typeof improvedEndPosition !== 'undefined') {
+          this.applyElementPosition(element, finalPosition, index)
+        }
       }
 
       element.addEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
       element.classList.add(this.repositioningClassName)
 
-      let improvedEndPosition
-      if (typeof improvedPositions !== 'undefined') {
-        improvedEndPosition = improvedPositions[1]
-      }
-
-      const endPosition = typeof improvedEndPosition !== 'undefined'
+      const temporaryEndPosition = typeof improvedEndPosition !== 'undefined'
         ? improvedEndPosition
-        : newPosition
-      this.applyElementPosition(element, endPosition, index)
+        : finalPosition
+      this.applyElementPosition(element, temporaryEndPosition, index)
     })
   }
 
@@ -589,7 +592,7 @@ export default class CollectionView {
       // reposition (NOTE: setTimeout important)
       setTimeout(() => {
 
-        this.repositionVisibleElements(newLayout)
+        this.repositionVisibleElements(newLayout, false)
 
         this._elements.forEach((element, index) => {
           assert(() => index >= 0)
@@ -800,7 +803,7 @@ export default class CollectionView {
 
           while (removedOrMovedLoadOffset < removedOrMovedIndices.length
                  && (removedOrMovedIndices[removedOrMovedLoadOffset]
-            <= index - addedOrMovedLoadOffset + removedOrMovedLoadOffset)) {
+                     <= index - addedOrMovedLoadOffset + removedOrMovedLoadOffset)) {
             removedOrMovedLoadOffset += 1
           }
 
@@ -841,7 +844,7 @@ export default class CollectionView {
         // NOTE: setTimeout important
         setTimeout(() => {
 
-          this.repositionVisibleElements(this._layout)
+          this.repositionVisibleElements(this._layout, true)
 
           if (this._installed) {
             this._container.addEventListener('scroll', this.onScroll, false)
