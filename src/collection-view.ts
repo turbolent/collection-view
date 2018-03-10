@@ -1,7 +1,7 @@
 import CollectionViewLayout from './layout'
 import style from './style.css'
 import { Line, NumberTuple } from './types'
-import { coalesce, sort, unique } from './utils'
+import { assert, coalesce, intersect, range, sort, unique } from './utils'
 
 import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
@@ -34,20 +34,9 @@ export interface CollectionViewParameters {
     readonly right?: number
     readonly bottom?: number
   }
+  readonly positionImprovementOffset?: number
 }
 
-function assert(f: () => boolean) {
-  if (process.env.NODE_ENV !== 'production') {
-    if (!f()) {
-      throw new Error("")
-    }
-  }
-}
-
-function range (min: number, max: number): number[] {
-  return Array.from(Array(max - min),
-                    (_, index) => min + index)
-}
 
 class InvalidArgumentError extends Error {}
 
@@ -60,6 +49,7 @@ export default class CollectionView {
   static readonly DEFAULT_DISAPPEARING_CLASS_NAME: string = 'disappearing'
   static readonly DEFAULT_ANIMATION_DURATION: number = 400
   static readonly DEFAULT_RESIZE_THROTTLE: number = 1000
+  static readonly DEFAULT_POSITION_IMPROVEMENT_OFFSET: number = 100
 
   private _wantsResize: boolean = false
   private _resizing: boolean = false
@@ -85,6 +75,7 @@ export default class CollectionView {
   readonly disappearingClassName: string
   readonly thresholds: CollectionViewThresholds
   readonly resizeThrottleDuration: number
+  readonly positionImprovementOffset: number
 
   get scrollPosition(): NumberTuple {
     return this._scrollPosition
@@ -135,6 +126,9 @@ export default class CollectionView {
       right: coalesce(thresholds.right, CollectionView.DEFAULT_THRESHOLD),
       bottom: coalesce(thresholds.bottom, CollectionView.DEFAULT_THRESHOLD)
     }
+
+    this.positionImprovementOffset = coalesce(parameters.positionImprovementOffset,
+                                              CollectionView.DEFAULT_POSITION_IMPROVEMENT_OFFSET)
 
     this.updateContainerSize(this._layout)
     this.updateCount()
@@ -414,8 +408,7 @@ export default class CollectionView {
 
     const transitionLine: Line = [ currentPosition, newPosition ]
 
-    // TODO: make setting
-    const offset = 100
+    const offset = this.positionImprovementOffset
 
     // NOTE: offsetting lines to take element size into account + some padding
 
@@ -426,7 +419,7 @@ export default class CollectionView {
       [ maxX, maxY + offset ]
     ]
 
-    const bottomIntersectionPoint = this.intersect(transitionLine, adjustedBottomLine)
+    const bottomIntersectionPoint = intersect(transitionLine, adjustedBottomLine)
     if (bottomIntersectionPoint) {
       return movingIn
         ? [bottomIntersectionPoint, undefined]
@@ -440,7 +433,7 @@ export default class CollectionView {
       [ maxX, minY - height - offset ]
     ]
 
-    const topIntersectionPoint = this.intersect(transitionLine, adjustedTopLine)
+    const topIntersectionPoint = intersect(transitionLine, adjustedTopLine)
     if (topIntersectionPoint) {
       return movingIn
         ? [topIntersectionPoint, undefined]
@@ -454,7 +447,7 @@ export default class CollectionView {
       [ minX - width - offset, maxY ]
     ]
 
-    const leftIntersectionPoint = this.intersect(transitionLine, adjustedLeftLine)
+    const leftIntersectionPoint = intersect(transitionLine, adjustedLeftLine)
     if (leftIntersectionPoint) {
       return movingIn
         ? [leftIntersectionPoint, undefined]
@@ -468,7 +461,7 @@ export default class CollectionView {
       [ maxX + offset, maxY ]
     ]
 
-    const rightIntersectionPoint = this.intersect(transitionLine, adjustedRightLine)
+    const rightIntersectionPoint = intersect(transitionLine, adjustedRightLine)
     if (rightIntersectionPoint) {
       return movingIn
         ? [rightIntersectionPoint, undefined]
@@ -494,29 +487,6 @@ export default class CollectionView {
       && maxY > containerMinY
       && minY < containerMaxY
     )
-  }
-
-  intersect([[x1, y1], [x2, y2]]: Line,
-            [[x3, y3], [x4, y4]]: Line): NumberTuple | undefined {
-
-    const denominator = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
-
-    // parallel?
-    if (Math.abs(denominator) <= Number.EPSILON) {
-      return
-    }
-
-    const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denominator
-    const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denominator
-
-    if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
-      return
-    }
-
-    return [
-      x1 + ua * (x2 - x1),
-      y1 + ua * (y2 - y1)
-    ]
   }
 
   private resize(): void {
