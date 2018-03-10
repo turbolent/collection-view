@@ -8,9 +8,6 @@
 :global(#wrapper) {
     width: 800px;
     height: 600px;
-}
-
-:global(#scroll) {
     background-color: #f4f4f6;
 }
 
