@@ -816,9 +816,6 @@ export default class CollectionView {
         this.configureElement(this._layout, element, index)
         this.getAndApplyElementPosition(this._layout, element, isNew ? index : oldIndex)
 
-        // NOTE: important, forces a relayout
-        element.getBoundingClientRect()
-
         if (isNew) {
           element.classList.add(this.appearingClassName)
           // TODO: trigger restyle in a more proper way
