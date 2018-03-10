@@ -44,6 +44,11 @@ function assert(f: () => boolean) {
   }
 }
 
+function range (min: number, max: number): number[] {
+  return Array.from(Array(max - min),
+                    (_, index) => min + index)
+}
+
 class InvalidArgumentError extends Error {}
 
 export default class CollectionView {
@@ -364,11 +369,26 @@ export default class CollectionView {
       const newPosition =
         newLayout.convertPositionInSize(this._scrollPosition, newContainerSize, this._layout)
 
-      const futureIndices = this.getIndices(newLayout, newPosition, newContainerSize)
+      // newPosition might not be the final scroll position:
+      // when at the bottom and the content is becoming smaller, the view is scrolled up
 
-      // TODO: use range [min(visible + future), max(visible + future)] ?
-      const indices = unique(this._visibleIndices.concat(futureIndices))
-      this.updateIndices(indices)
+      const finalContentSize = newLayout.getContentSize(this._count, newContainerSize)
+
+      const finalPosition: NumberTuple = [
+        newPosition[0] - Math.abs(Math.min(0, finalContentSize[0] - (newPosition[0] + newContainerSize[0]))),
+        newPosition[1] - Math.abs(Math.min(0, finalContentSize[1] - (newPosition[1] + newContainerSize[1])))
+      ]
+
+      const finalIndices = this.getIndices(newLayout, finalPosition, newContainerSize)
+
+      const combinedIndices = unique(this._visibleIndices.concat(finalIndices))
+
+      const count = combinedIndices.length
+      if (count) {
+        const min = combinedIndices.reduce((min, value) => Math.min(min, value))
+        const max = combinedIndices.reduce((max, value) => Math.max(max, value))
+        this.updateIndices(range(min, max + 1))
+      }
 
       // temporarily shift position of visible elements and scroll
       // to future position, so elements appear to "stay"
@@ -385,7 +405,7 @@ export default class CollectionView {
 
       this.scrollTo(newPosition)
 
-      this._scrollPosition = newPosition
+      this._scrollPosition = finalPosition
 
       this.updateContainerSize(newLayout)
 
@@ -401,15 +421,13 @@ export default class CollectionView {
 
         this._layout = newLayout
 
-        if (this._installed) {
-          this._container.addEventListener('scroll', this.onScroll, false)
-        }
-
+        // TODO: don't run if layout is updated midflight
         setTimeout(() => {
-          // NOTE: NOT updateIndices(futureIndices):
-          // the browser might have scrolled up implicitly if the content size became smaller
-
           this.updateCurrentIndices()
+
+          if (this._installed) {
+            this._container.addEventListener('scroll', this.onScroll, false)
+          }
 
           resolve()
         }, this.animationDuration)
