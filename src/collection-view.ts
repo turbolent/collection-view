@@ -460,7 +460,10 @@ export default class CollectionView {
 
     // check right
 
-    const adjustedRightLine: Line = [ [ maxX, minY ], [ maxX, maxY ] ]
+    const adjustedRightLine: Line = [
+      [ maxX + offset, minY ],
+      [ maxX + offset, maxY ]
+    ]
 
     const rightIntersectionPoint = this.intersect(transitionLine, adjustedRightLine)
     if (rightIntersectionPoint) {
