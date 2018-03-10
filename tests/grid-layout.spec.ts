@@ -239,9 +239,9 @@ describe("Collection View with default Grid Layout", () => {
       return collectionView.changeIndices([], addedIndices, new Map())
     })
 
-    // scroll down
+    // scroll to bottom
     await page.evaluate(() => {
-      wrapperElement.scrollTo(0, 800)
+       wrapperElement.scrollTo(0, wrapperElement.scrollHeight)
     })
 
     // change layout
