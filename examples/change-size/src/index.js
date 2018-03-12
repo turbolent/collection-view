@@ -1,5 +1,5 @@
 
-import { CollectionView, GridLayout } from '../../../dist'
+import { CollectionView, GridLayout, Size } from '../../../dist'
 import style from '../../_common/style.css'
 
 
@@ -20,7 +20,7 @@ class Delegate {
 }
 
 function newLayout(large) {
-  const itemSize = large ? [260, 260] : [180, 180]
+  const itemSize = large ? new Size(260, 260) : new Size(180, 180)
   return new GridLayout({itemSize})
 }
 

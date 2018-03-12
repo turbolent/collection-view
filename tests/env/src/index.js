@@ -1,5 +1,5 @@
 
-import { CollectionView, GridLayout } from '../../../dist'
+import { CollectionView, GridLayout, Size } from '../../../dist'
 import style from './style.css'
 
 
@@ -33,4 +33,5 @@ window.onload = function () {
     }
   })
   window.newGridLayout = (params) => new GridLayout(params)
+  window.Size = Size
 }

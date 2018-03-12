@@ -1,5 +1,5 @@
 
-import { CollectionView, GridLayout } from '../../../dist'
+import { CollectionView, GridLayout, Insets } from '../../../dist'
 import style from '../../_common/style.css'
 import './style.css'
 
@@ -23,10 +23,11 @@ class Delegate {
     if (this.loadingMore)
       return
 
-    const end = view.scrollPosition[1]
-                + view.containerSize[1]
+    const end = view.scrollPosition.y
+                + view.containerSize.height
                 + Delegate.LOAD_THRESHOLD
-    if (end < view.contentSize[1])
+
+    if (end < view.contentSize.height)
       return
 
     this.loadingMore = true
@@ -58,7 +59,8 @@ window.onload = function () {
   const scrollElement = document.getElementById('scroll')
   const items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
   const delegate = new Delegate(items)
-  const layout = new GridLayout()
-  layout.insets = [[20, 20], [20, 100]]
+  const layout = new GridLayout({
+      insets: new Insets(20, 100, 20, 20)
+  })
   new CollectionView(scrollElement, layout, delegate)
 }

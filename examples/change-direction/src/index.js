@@ -27,8 +27,9 @@ window.onload = function () {
   const view = new CollectionView(scrollElement, layout, delegate)
   const button = document.getElementById('button')
   button.onclick = function () {
-    const newLayout = new GridLayout()
-    newLayout.direction = 1 - view.layout.direction
+    const newLayout = new GridLayout({
+      direction: view.layout.direction.other
+    })
     view.updateLayout(newLayout)
   }
 }

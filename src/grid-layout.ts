@@ -1,136 +1,139 @@
 import CollectionViewLayout from './layout'
-import { NumberTuple } from './types'
-
-export enum GridLayoutDirection {
-  VERTICAL,
-  HORIZONTAL
-}
+import { Direction, Insets, Position, Ranges, Size, Spacing } from './types'
+import { coalesce, range } from './utils'
 
 export interface GridLayoutParameters {
-  readonly direction?: GridLayoutDirection
-  readonly insets?: [NumberTuple, NumberTuple]
-  readonly spacing?: NumberTuple
-  readonly itemSize?: NumberTuple
+  readonly direction?: Direction
+  readonly insets?: Insets
+  readonly spacing?: Spacing
+  readonly itemSize?: Size
 }
 
 export default class GridLayout implements CollectionViewLayout {
 
-  static readonly DEFAULT_DIRECTION: GridLayoutDirection = GridLayoutDirection.VERTICAL
-  static readonly DEFAULT_INSETS: [NumberTuple, NumberTuple] = [[10, 10], [10, 10]]
-  static readonly DEFAULT_SPACING: NumberTuple = [20, 20]
-  static readonly DEFAULT_ITEM_SIZE: NumberTuple = [200, 200]
+  static readonly DEFAULT_DIRECTION: Direction = Direction.VERTICAL
+  static readonly DEFAULT_INSETS: Insets = new Insets(10, 10, 10, 10)
+  static readonly DEFAULT_SPACING: Spacing = new Spacing(20, 20)
+  static readonly DEFAULT_ITEM_SIZE: Size = new Size(200, 200)
 
-  private itemCount: number = 0
-  private containerSizeConstraint: number = 0
+  private readonly _otherDirection: Direction
+  private _otherItemCount: number = 0
+  private _otherContainerSizeConstraint: number = 0
 
-  readonly direction: GridLayoutDirection
-  readonly insets: [NumberTuple, NumberTuple]
-  readonly spacing: NumberTuple
-  readonly itemSize: NumberTuple
+  readonly direction: Direction
+  readonly insets: Insets
+  readonly spacing: Spacing
+  readonly itemSize: Size
 
   constructor({direction, insets, spacing, itemSize}: GridLayoutParameters = {}) {
-    this.direction = direction || GridLayout.DEFAULT_DIRECTION
-    this.insets = insets || GridLayout.DEFAULT_INSETS
-    this.spacing = spacing || GridLayout.DEFAULT_SPACING
-    this.itemSize = itemSize || GridLayout.DEFAULT_ITEM_SIZE
+    this.direction = coalesce(direction, GridLayout.DEFAULT_DIRECTION)
+    this._otherDirection = this.direction.other
+    this.insets = coalesce(insets, GridLayout.DEFAULT_INSETS)
+    this.spacing = coalesce(spacing, GridLayout.DEFAULT_SPACING)
+    this.itemSize = coalesce(itemSize, GridLayout.DEFAULT_ITEM_SIZE)
   }
 
-  private getItemCount(containerSize: NumberTuple): number {
-    const spacing = this.spacing[this.direction]
-    const [startInset, endInset] = this.insets[this.direction]
-    const availableSpace = containerSize[this.direction] - startInset - endInset
-    const spaceAndSpacing = availableSpace + spacing
-    const itemAndSpacing = this.itemSize[this.direction] + spacing
-    return Math.floor(spaceAndSpacing / itemAndSpacing)
+  private getOtherItemCount(containerSize: Size): number {
+    const otherDirection = this._otherDirection
+    const otherStartInset = this.insets.getStart(otherDirection)
+    const otherEndInset = this.insets.getEnd(otherDirection)
+    const otherContainerSize = containerSize.get(otherDirection)
+    const otherAvailableSpace = otherContainerSize - otherStartInset - otherEndInset
+    const otherSpacing = this.spacing.get(otherDirection)
+    const otherItemSize = this.itemSize.get(otherDirection)
+    return Math.floor((otherAvailableSpace + otherSpacing) / (otherItemSize + otherSpacing))
   }
 
   configureElement(element: HTMLElement, index: number): void {
-    const [width, height] = this.itemSize
+    const {width, height} = this.itemSize
     element.style.width = `${width}px`
     element.style.height = `${height}px`
   }
 
-  updateContainerSize(containerSize: NumberTuple): void {
-    this.containerSizeConstraint = containerSize[this.direction]
-    this.itemCount = this.getItemCount(containerSize)
+  updateContainerSize(containerSize: Size): void {
+    this._otherContainerSizeConstraint = containerSize.get(this._otherDirection)
+    this._otherItemCount = this.getOtherItemCount(containerSize)
   }
 
-  getIndices(xOffsets: NumberTuple, yOffsets: NumberTuple, count: number, containerSize: NumberTuple): number[] {
-    const offsets = [xOffsets, yOffsets]
-    const otherDirection = 1 - this.direction
-    const [otherStartInset, otherEndInset] = this.insets[otherDirection]
-    let [offset, endOffset] = offsets[otherDirection]
-    offset -= otherStartInset
-    endOffset -= otherEndInset
-    const itemCount = this.getItemCount(containerSize)
-    const spacing = this.spacing[otherDirection]
-    const itemAndSpacing = this.itemSize[otherDirection] + spacing
-    const startIndex = Math.max(0, Math.floor(offset / itemAndSpacing) * itemCount)
-    const endIndex = Math.min(Math.ceil(endOffset / itemAndSpacing) * itemCount, count)
-    const indices = []
-    for (let i = startIndex; i < endIndex; i += 1) {
-      indices.push(i)
-    }
-    return indices
+  getIndices(ranges: Ranges, count: number, containerSize: Size): number[] {
+    const thisRange = ranges.get(this.direction)
+    const startInset = this.insets.getStart(this.direction)
+    const start = thisRange.start - startInset
+    const end = thisRange.end - startInset
+    const otherItemCount = this.getOtherItemCount(containerSize)
+    const spacing = this.spacing.get(this.direction)
+    const itemSize = this.itemSize.get(this.direction)
+    const itemAndSpacing = itemSize + spacing
+    const startIndex = Math.max(0, Math.floor(start / itemAndSpacing) * otherItemCount)
+    const endIndex = Math.min(Math.ceil(end / itemAndSpacing) * otherItemCount, count)
+    return range(startIndex, endIndex)
   }
 
-  getElementPosition(index: number): NumberTuple {
-    const sectionIndex = Math.floor(index / this.itemCount)
-    const itemIndex = index % this.itemCount
-    const spacing = this.spacing[this.direction]
-    const [startInset, endInset] = this.insets[this.direction]
-    const otherDirection = 1 - this.direction
-    const [otherStartInset] = this.insets[otherDirection]
-    const itemAndSpacing = this.itemSize[this.direction] + spacing
-    const availableSpace = this.containerSizeConstraint - startInset - endInset
-    const diff = availableSpace + spacing - this.itemCount * itemAndSpacing
-    const otherSpacing = this.spacing[otherDirection]
-    const otherItemAndSpacing = this.itemSize[otherDirection] + otherSpacing
-    const result: NumberTuple = [0, 0]
-    result[this.direction] = startInset + itemIndex * itemAndSpacing + Math.max(0, diff / 2)
-    result[otherDirection] = otherStartInset + sectionIndex * otherItemAndSpacing
-    return result
+  getElementPosition(index: number): Position {
+    const sectionIndex = Math.floor(index / this._otherItemCount)
+    const itemIndex = index % this._otherItemCount
+    const otherDirection = this._otherDirection
+    const spacing = this.spacing.get(this.direction)
+    const otherSpacing = this.spacing.get(otherDirection)
+    const startInset = this.insets.getStart(this.direction)
+    const otherStartInset = this.insets.getStart(otherDirection)
+    const otherEndInset = this.insets.getEnd(otherDirection)
+    const itemSize = this.itemSize.get(this.direction)
+    const itemSizeAndSpacing = itemSize + spacing
+    const otherItemSize = this.itemSize.get(otherDirection)
+    const otherItemSizeAndSpacing = otherItemSize + otherSpacing
+    const otherAvailableSpace = this._otherContainerSizeConstraint - otherStartInset - otherEndInset
+    const diff = otherAvailableSpace + otherSpacing - this._otherItemCount * otherItemSizeAndSpacing
+
+    return Position.in(
+      this.direction,
+      startInset + sectionIndex * itemSizeAndSpacing,
+      otherStartInset + itemIndex * otherItemSizeAndSpacing + Math.max(0, diff / 2),
+    )
   }
 
-  getContentSize(count: number, containerSize: NumberTuple): NumberTuple {
-    const itemCount = this.getItemCount(containerSize)
-    const sectionCount = Math.ceil(count / itemCount)
-    const otherDirection = 1 - this.direction
-    const [startInset, endInset] = this.insets[otherDirection]
-    const spacing = this.spacing[otherDirection]
-    const itemAndSpacing = this.itemSize[otherDirection] + spacing
-    const space = startInset + sectionCount * itemAndSpacing + endInset
-    const result: NumberTuple = [0, 0]
-    result[this.direction] = containerSize[this.direction]
-    result[otherDirection] = space
-    return result
+  getContentSize(count: number, containerSize: Size): Size {
+    const otherItemCount = this.getOtherItemCount(containerSize)
+    const otherSize = containerSize.get(this._otherDirection)
+    const sectionCount = Math.ceil(count / otherItemCount)
+    const startInset = this.insets.getStart(this.direction)
+    const endInset = this.insets.getEnd(this.direction)
+    const spacing = this.spacing.get(this.direction)
+    const itemSizeAndSpacing = this.itemSize.get(this.direction) + spacing
+    const size = startInset + sectionCount * itemSizeAndSpacing + endInset
+    return Size.in(
+      this.direction,
+      size,
+      otherSize
+    )
   }
 
-  convertPositionInSize(position: NumberTuple,
-                        newContainerSize: NumberTuple,
-                        oldLayout: CollectionViewLayout): NumberTuple {
+  convertPositionInSize(position: Position,
+                        newContainerSize: Size,
+                        oldLayout: CollectionViewLayout): Position {
 
     const oldGridLayout = oldLayout instanceof GridLayout
                           ? oldLayout as GridLayout
                           : this
-    const oldOtherDimension = 1 - oldGridLayout.direction
-    const oldOtherPosition = position[oldOtherDimension]
-    const oldOtherspacing = oldGridLayout.spacing[oldOtherDimension]
-    const oldOtherItemAndSpacing = oldGridLayout.itemSize[oldOtherDimension] + oldOtherspacing
-    const oldSectionIndex = Math.floor(oldOtherPosition / oldOtherItemAndSpacing)
-    const oldItemIndex = oldSectionIndex * oldGridLayout.itemCount
-    const oldItemOffset = oldOtherPosition % oldOtherItemAndSpacing
+    const oldDirection = oldGridLayout.direction
+    const oldPosition = position.get(oldDirection)
+    const oldSpacing = oldGridLayout.spacing.get(oldDirection)
+    const oldItemSizeAndSpacing = oldGridLayout.itemSize.get(oldDirection) + oldSpacing
+    const oldSectionIndex = Math.floor(oldPosition / oldItemSizeAndSpacing)
+    const oldItemIndex = oldSectionIndex * oldGridLayout._otherItemCount
+    const oldItemOffset = oldPosition % oldItemSizeAndSpacing
 
-    const newItemCount = this.getItemCount(newContainerSize)
+    const newItemCount = this.getOtherItemCount(newContainerSize)
     const newSectionIndex = Math.floor(oldItemIndex / newItemCount)
-    const newOtherDimension = 1 - this.direction
-    const newOtherspacing = this.spacing[newOtherDimension]
-    const newOtherItemAndSpacing = this.itemSize[newOtherDimension] + newOtherspacing
-    const newOtherPosition = newSectionIndex * newOtherItemAndSpacing + oldItemOffset
+    const newDirection = this.direction
+    const newSpacing = this.spacing.get(newDirection)
+    const newItemSizeAndSpacing = this.itemSize.get(newDirection) + newSpacing
+    const newPosition = newSectionIndex * newItemSizeAndSpacing + oldItemOffset
 
-    const result: NumberTuple = [0, 0]
-    result[this.direction] = 0
-    result[newOtherDimension] = newOtherPosition
-    return result
+    return Position.in(
+      this.direction,
+      newPosition,
+      0
+    )
   }
 }

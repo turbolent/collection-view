@@ -1,4 +1,4 @@
-import { Line, NumberTuple } from './types'
+import { Line, Position } from './types'
 
 export function unique<T>(items: T[]): T[] {
   const seen = new Map<T, boolean>()
@@ -37,8 +37,10 @@ export function range (min: number, max: number): number[] {
                     (_, index) => min + index)
 }
 
-export function intersect([[x1, y1], [x2, y2]]: Line,
-                          [[x3, y3], [x4, y4]]: Line): NumberTuple | undefined {
+export function intersect(line1: Line, line2: Line): Position | undefined {
+
+  const {start: {x: x1, y: y1}, end: {x: x2, y: y2}} = line1
+  const {start: {x: x3, y: y3}, end: {x: x4, y: y4}} = line2
 
   const denominator = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
 
@@ -54,8 +56,8 @@ export function intersect([[x1, y1], [x2, y2]]: Line,
     return
   }
 
-  return [
+  return new Position(
     x1 + ua * (x2 - x1),
     y1 + ua * (y2 - y1)
-  ]
+  )
 }
