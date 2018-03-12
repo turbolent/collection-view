@@ -1,8 +1,6 @@
 import { BoundingBox, Browser, ElementHandle, launch, Page } from 'puppeteer'
 import * as path from 'path'
-import { CollectionViewDelegate, GridLayoutParameters } from '../src'
-import CollectionView from '../src/collection-view'
-import GridLayout from '../src/grid-layout'
+import { CollectionViewDelegate, GridLayoutParameters, Size as ImportedSize, CollectionView, GridLayout } from '../dist'
 
 jest.setTimeout(10000)
 
@@ -40,6 +38,7 @@ declare const delegate: CollectionViewDelegate
 declare const collectionView: CollectionView
 declare const wrapperElement: HTMLDivElement
 declare const newGridLayout: (params: GridLayoutParameters) => GridLayout
+declare const Size: (width: number, height: number) => ImportedSize
 
 async function getElements(): Promise<ElementHandle[]> {
   return await page.$$('#scroll div')
@@ -79,7 +78,8 @@ async function expectElements(expected: [number, number, string][], size: [numbe
     expected.map(([x, y, content]): [BoundingBox, string] =>
                    [{x, y, width: size[0], height: size[1]}, content])
 
-  expect(actualBoundingBoxesAndContents).toEqual(expectedBoundingBoxesAndContents)
+  expect(actualBoundingBoxesAndContents)
+    .toEqual(expectedBoundingBoxesAndContents)
 }
 
 
@@ -247,7 +247,7 @@ describe("Collection View with default Grid Layout", () => {
 
     // change layout
     await page.evaluate(() => {
-      return collectionView.updateLayout(newGridLayout({itemSize: [300, 300]}))
+      return collectionView.updateLayout(newGridLayout({itemSize: new Size(300, 300)}))
     })
 
     // check the elements were changed properly
@@ -261,7 +261,7 @@ describe("Collection View with default Grid Layout", () => {
 
     // change the layout back to the initial state
     await page.evaluate(() => {
-      return collectionView.updateLayout(newGridLayout({itemSize: [200, 200]}))
+      return collectionView.updateLayout(newGridLayout({itemSize: new Size(200, 200)}))
     })
 
     // check the elements were changed properly
@@ -279,7 +279,7 @@ describe("Collection View with default Grid Layout", () => {
 
     // change layout
     await page.evaluate(() => {
-      return collectionView.updateLayout(newGridLayout({itemSize: [260, 260]}))
+      return collectionView.updateLayout(newGridLayout({itemSize: new Size(260, 260)}))
     })
 
     // add initial elements
@@ -297,7 +297,7 @@ describe("Collection View with default Grid Layout", () => {
 
     // change layout
     await page.evaluate(() => {
-      return collectionView.updateLayout(newGridLayout({itemSize: [180, 180]}))
+      return collectionView.updateLayout(newGridLayout({itemSize: new Size(180, 180)}))
     })
 
     // check the elements were changed properly

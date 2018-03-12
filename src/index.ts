@@ -3,9 +3,10 @@ import CollectionView, {
   CollectionViewParameters,
   CollectionViewThresholds
 } from './collection-view'
-import GridLayout, { GridLayoutDirection, GridLayoutParameters } from './grid-layout'
+import GridLayout, { GridLayoutParameters } from './grid-layout'
 import CollectionViewLayout from './layout'
 import ListLayout from './list-layout'
+import { Range, Size, Position, Insets, Spacing, Direction, Line, Ranges } from './types'
 
 export {
   CollectionView,
@@ -14,7 +15,14 @@ export {
   CollectionViewParameters,
   CollectionViewThresholds,
   GridLayout,
-  GridLayoutDirection,
   GridLayoutParameters,
-  ListLayout
+  ListLayout,
+  Range,
+  Size,
+  Position,
+  Insets,
+  Spacing,
+  Direction,
+  Line,
+  Ranges
 }

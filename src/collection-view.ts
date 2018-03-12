@@ -1,8 +1,7 @@
 import CollectionViewLayout from './layout'
 import style from './style.css'
-import { Line, NumberTuple } from './types'
+import { Line, Position, Range, Ranges, Size } from './types'
 import { assert, coalesce, intersect, range, sort, unique } from './utils'
-
 import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
 
@@ -55,12 +54,12 @@ export default class CollectionView {
   private _resizing: boolean = false
   private _updating: boolean = false
   private _installed: boolean = true
-  private _contentSize: NumberTuple = [0, 0]
-  private _containerSize: NumberTuple = [0, 0]
-  private _scrollPosition: NumberTuple = [0, 0]
+  private _contentSize: Size = new Size(0, 0)
+  private _containerSize: Size = new Size(0, 0)
+  private _scrollPosition: Position = new Position(0, 0)
   private _count: number = 0
   private _elements = new Map<number, HTMLElement>()
-  private _positions = new WeakMap<HTMLElement, NumberTuple>()
+  private _positions = new WeakMap<HTMLElement, Position>()
   private _visibleIndices: number[] = []
   private _onResize: () => void
   private _container: HTMLElement
@@ -77,7 +76,7 @@ export default class CollectionView {
   readonly resizeThrottleDuration: number
   readonly positionImprovementOffset: number
 
-  get scrollPosition(): NumberTuple {
+  get scrollPosition(): Position {
     return this._scrollPosition
   }
 
@@ -85,11 +84,11 @@ export default class CollectionView {
     return this._layout
   }
 
-  get contentSize(): NumberTuple {
+  get contentSize(): Size {
     return this._contentSize
   }
 
-  get containerSize(): NumberTuple {
+  get containerSize(): Size {
     return this._containerSize
   }
 
@@ -175,11 +174,9 @@ export default class CollectionView {
                              this.removeElement(element))
   }
 
-  private get currentContainerSize(): NumberTuple {
-    return [
-      this._container.clientWidth,
-      this._container.clientHeight
-    ]
+  private get currentContainerSize(): Size {
+    return new Size(this._container.clientWidth,
+                    this._container.clientHeight)
   }
 
   private updateContainerSize(layout: CollectionViewLayout): void {
@@ -196,16 +193,14 @@ export default class CollectionView {
   private updateContentSize(layout: CollectionViewLayout): void {
     const containerSize = this.currentContainerSize
     this._contentSize = layout.getContentSize(this._count, containerSize)
-    const [contentWidth, contentHeight] = this._contentSize
-    this.content.style.minWidth = `${contentWidth}px`
-    this.content.style.minHeight = `${contentHeight}px`
+    const {width, height} = this._contentSize
+    this.content.style.minWidth = `${width}px`
+    this.content.style.minHeight = `${height}px`
   }
 
-  private get currentScrollPosition(): NumberTuple {
-    return [
-      this._container.scrollLeft,
-      this._container.scrollTop
-    ]
+  private get currentScrollPosition(): Position {
+    return new Position(this._container.scrollLeft,
+                        this._container.scrollTop)
   }
 
   private onScroll(): void {
@@ -225,24 +220,30 @@ export default class CollectionView {
     })
   }
 
-  private getAxisOffsets(position: number, range: number, startThreshold: number, endThreshold: number): NumberTuple {
+  private getAxisRange(position: number, range: number, startThreshold: number, endThreshold: number): Range {
     const offset = Math.max(0, position - startThreshold)
     const fullRange = startThreshold + range + endThreshold
     const endOffset = offset + fullRange
-    return [offset, endOffset]
+    return new Range(offset, endOffset)
   }
 
-  private getOffsets([x, y]: NumberTuple): [NumberTuple, NumberTuple] {
-    const [containerWidth, containerHeight] = this._containerSize
-    const {left, top, right, bottom} = this.thresholds
-    const xOffsets = this.getAxisOffsets(x, containerWidth, left, right)
-    const yOffsets = this.getAxisOffsets(y, containerHeight, top, bottom)
-    return [xOffsets, yOffsets]
+  private getXRange({x}: Position): Range {
+    const {width} = this._containerSize
+    const {left, right} = this.thresholds
+    return this.getAxisRange(x, width, left, right)
   }
 
-  private getIndices(layout: CollectionViewLayout, position: NumberTuple, containerSize: NumberTuple): number[] {
-    const [xOffsets, yOffsets] = this.getOffsets(position)
-    return layout.getIndices(xOffsets, yOffsets, this._count, containerSize)
+  private getYRange({y}: Position): Range {
+    const {height} = this._containerSize
+    const {top, bottom} = this.thresholds
+    return this.getAxisRange(y, height, top, bottom)
+  }
+
+  private getIndices(layout: CollectionViewLayout, position: Position, containerSize: Size): number[] {
+    const xRange = this.getXRange(position)
+    const yRange = this.getYRange(position)
+    return layout.getIndices(new Ranges(xRange, yRange),
+                             this._count, containerSize)
   }
 
   private get currentIndices(): number[] {
@@ -305,13 +306,13 @@ export default class CollectionView {
     layout.configureElement(element, index)
   }
 
-  private getElementPosition(layout: CollectionViewLayout, index: number): NumberTuple {
+  private getElementPosition(layout: CollectionViewLayout, index: number): Position {
     const position = layout.getElementPosition(index)
-    return position.map(Math.round) as NumberTuple
+    return position.map(Math.round)
   }
 
-  private applyElementPosition(element: HTMLElement, position: NumberTuple, index: number): void {
-    const [x, y] = position
+  private applyElementPosition(element: HTMLElement, position: Position, index: number): void {
+    const {x, y} = position
     element.style.zIndex = `${index + 1}`
     element.style.transform = `translate3d(${x}px, ${y}px, 0)`
     this._positions.set(element, position)
@@ -342,34 +343,33 @@ export default class CollectionView {
         throw Error("missing position for element: " + element)
       }
 
-      if (finalPosition[0] == currentPosition[0]
-          && finalPosition[1] == currentPosition[1]) {
+      if (finalPosition.equals(currentPosition)) {
         return
       }
 
-      const size: NumberTuple = [element.offsetWidth, element.offsetHeight]
+      const size = new Size(element.offsetWidth, element.offsetHeight)
 
       const improvedPositions = improvePositions
         ? this.getImprovedPositions(currentPosition, finalPosition, size)
         : undefined
 
-      if (typeof improvedPositions !== 'undefined') {
+      if (improvedPositions !== undefined) {
         const improvedStartPosition = improvedPositions[0]
-        if (typeof improvedStartPosition !== 'undefined') {
+        if (improvedStartPosition !== undefined) {
           this.applyElementPosition(element, improvedStartPosition, index)
           element.getBoundingClientRect()
         }
       }
 
-      let improvedEndPosition: NumberTuple | undefined
-      if (typeof improvedPositions !== 'undefined') {
+      let improvedEndPosition: Position | undefined
+      if (improvedPositions !== undefined) {
         improvedEndPosition = improvedPositions[1]
       }
 
       const onTransitionEnd = () => {
         element.removeEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
         element.classList.remove(this.repositioningClassName)
-        if (typeof improvedEndPosition !== 'undefined') {
+        if (improvedEndPosition !== undefined) {
           this.applyElementPosition(element, finalPosition, index)
         }
       }
@@ -377,18 +377,18 @@ export default class CollectionView {
       element.addEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
       element.classList.add(this.repositioningClassName)
 
-      const temporaryEndPosition = typeof improvedEndPosition !== 'undefined'
+      const temporaryEndPosition = improvedEndPosition !== undefined
         ? improvedEndPosition
         : finalPosition
       this.applyElementPosition(element, temporaryEndPosition, index)
     })
   }
 
-  private getImprovedPositions(currentPosition: NumberTuple,
-                               newPosition: NumberTuple,
-                               size: NumberTuple): [NumberTuple | undefined, NumberTuple | undefined] | undefined {
+  private getImprovedPositions(currentPosition: Position,
+                               newPosition: Position,
+                               size: Size): [Position | undefined, Position | undefined] | undefined {
 
-    const [width, height] = size
+    const {width, height} = size
 
     const currentIsVisible = this.isVisible(currentPosition, size)
     const newIsVisible = this.isVisible(newPosition, size)
@@ -400,13 +400,13 @@ export default class CollectionView {
       return
     }
 
-    const [ containerWidth, containerHeight ] = this._containerSize
-    const [ minX, minY ] = this._scrollPosition
+    const {width: containerWidth, height: containerHeight} = this._containerSize
+    const {x: minX, y: minY} = this._scrollPosition
 
     const maxY = minY + containerHeight
     const maxX = minX + containerWidth
 
-    const transitionLine: Line = [ currentPosition, newPosition ]
+    const transitionLine = new Line(currentPosition, newPosition)
 
     const offset = this.positionImprovementOffset
 
@@ -414,10 +414,9 @@ export default class CollectionView {
 
     // check bottom
 
-    const adjustedBottomLine: Line = [
-      [ minX, maxY + offset ],
-      [ maxX, maxY + offset ]
-    ]
+    const adjustedBottomLine =
+      new Line(new Position(minX, maxY + offset),
+               new Position(maxX, maxY + offset))
 
     const bottomIntersectionPoint = intersect(transitionLine, adjustedBottomLine)
     if (bottomIntersectionPoint) {
@@ -428,10 +427,9 @@ export default class CollectionView {
 
     // check top
 
-    const adjustedTopLine: Line = [
-      [ minX, minY - height - offset ],
-      [ maxX, minY - height - offset ]
-    ]
+    const adjustedTopLine =
+      new Line(new Position(minX, minY - height - offset),
+               new Position(maxX, minY - height - offset))
 
     const topIntersectionPoint = intersect(transitionLine, adjustedTopLine)
     if (topIntersectionPoint) {
@@ -442,10 +440,9 @@ export default class CollectionView {
 
     // check left
 
-    const adjustedLeftLine: Line = [
-      [ minX - width - offset, minY ],
-      [ minX - width - offset, maxY ]
-    ]
+    const adjustedLeftLine =
+      new Line(new Position(minX - width - offset, minY),
+               new Position(minX - width - offset, maxY))
 
     const leftIntersectionPoint = intersect(transitionLine, adjustedLeftLine)
     if (leftIntersectionPoint) {
@@ -456,10 +453,9 @@ export default class CollectionView {
 
     // check right
 
-    const adjustedRightLine: Line = [
-      [ maxX + offset, minY ],
-      [ maxX + offset, maxY ]
-    ]
+    const adjustedRightLine =
+      new Line(new Position(maxX + offset, minY),
+               new Position(maxX + offset, maxY))
 
     const rightIntersectionPoint = intersect(transitionLine, adjustedRightLine)
     if (rightIntersectionPoint) {
@@ -471,9 +467,9 @@ export default class CollectionView {
     return
   }
 
-  isVisible([minX, minY]: NumberTuple, [width, height]: NumberTuple): boolean {
-    const [ containerWidth, containerHeight ] = this._containerSize
-    const [ containerMinX, containerMinY ] = this._scrollPosition
+  isVisible({x: minX, y: minY}: Position, {width, height}: Size): boolean {
+    const {width: containerWidth, height: containerHeight } = this._containerSize
+    const {x: containerMinX, y: containerMinY } = this._scrollPosition
 
     const containerMaxX = containerMinX + containerWidth
     const containerMaxY = containerMinY + containerHeight
@@ -524,10 +520,10 @@ export default class CollectionView {
 
       const finalContentSize = newLayout.getContentSize(this._count, newContainerSize)
 
-      const finalPosition: NumberTuple = [
-        newPosition[0] - Math.abs(Math.min(0, finalContentSize[0] - (newPosition[0] + newContainerSize[0]))),
-        newPosition[1] - Math.abs(Math.min(0, finalContentSize[1] - (newPosition[1] + newContainerSize[1])))
-      ]
+      const finalPosition = new Position(
+        newPosition.x - Math.abs(Math.min(0, finalContentSize.width - (newPosition.x + newContainerSize.width))),
+        newPosition.y - Math.abs(Math.min(0, finalContentSize.height - (newPosition.y + newContainerSize.height)))
+      )
 
       const finalIndices = this.getIndices(newLayout, finalPosition, newContainerSize)
 
@@ -543,8 +539,8 @@ export default class CollectionView {
       // temporarily shift position of visible elements and scroll
       // to future position, so elements appear to "stay"
 
-      const diffX = Math.round(newPosition[ 0 ] - this._scrollPosition[ 0 ])
-      const diffY = Math.round(newPosition[ 1 ] - this._scrollPosition[ 1 ])
+      const diffX = Math.round(newPosition.x - this._scrollPosition.x)
+      const diffY = Math.round(newPosition.y - this._scrollPosition.y)
 
       if (diffX || diffY) {
         this._elements.forEach((element) =>
@@ -585,14 +581,14 @@ export default class CollectionView {
     })
   }
 
-  public scrollTo([x, y]: NumberTuple): void {
+  public scrollTo({x, y}: Position): void {
     this._container.scrollLeft = x
     this._container.scrollTop = y
   }
 
-  public animatedScrollTo([toX, toY]: NumberTuple): void {
+  public animatedScrollTo({x: toX, y: toY}: Position): void {
     const start = Date.now()
-    const [fromX, fromY] = this.currentScrollPosition
+    const {x: fromX, y: fromY} = this.currentScrollPosition
     const easing = CollectionView.EASING
     const scroll = () => {
       const now = Date.now()
@@ -600,7 +596,7 @@ export default class CollectionView {
       const easedProgress = easing(progress)
       const targetX = fromX + easedProgress * (toX - fromX)
       const targetY = fromY + easedProgress * (toY - fromY)
-      this.scrollTo([targetX, targetY])
+      this.scrollTo(new Position(targetX, targetY))
 
       if (progress < 1) {
         requestAnimationFrame(scroll)
@@ -628,7 +624,7 @@ export default class CollectionView {
       if (!(movedIndexMap instanceof Map)) {
         const movedIndexObject = movedIndexMap as { [key: string]: any }
         const pairs = Object.keys(movedIndexObject)
-          .map((key): NumberTuple =>
+          .map((key): [number, number] =>
                  [Number(key), Number(movedIndexObject[key])])
         movedIndexMap = new Map<number, number>(pairs)
       }
@@ -660,24 +656,27 @@ export default class CollectionView {
 
       // scroll if current position will be out of bounds
 
-      const [newContentWidth, newContentHeight] =
+      const {width: newContentWidth, height: newContentHeight} =
         this._layout.getContentSize(this._count, this._containerSize)
 
-      const [containerWidth, containerHeight] = this._containerSize
-      const [scrollX, scrollY] = this._scrollPosition
+      const {width: containerWidth, height: containerHeight} = this._containerSize
+      const {x: scrollX, y: scrollY} = this._scrollPosition
+
       const right = scrollX + containerWidth
       const adjustX = right > newContentWidth
-      if (adjustX) {
-        this._scrollPosition[0] = Math.max(0, scrollX - (right - newContentWidth))
-      }
 
       const bottom = scrollY + containerHeight
       const adjustY = bottom > newContentHeight
-      if (adjustY) {
-        this._scrollPosition[1] = Math.max(0, scrollY - (bottom - newContentHeight))
-      }
 
       if (adjustX || adjustY) {
+        this._scrollPosition =
+          new Position(adjustX
+                         ? Math.max(0, scrollX - (right - newContentWidth))
+                         : scrollX,
+                       adjustY
+                         ? Math.max(0, scrollY - (bottom - newContentHeight))
+                         : scrollY)
+
         this.animatedScrollTo(this._scrollPosition)
       }
 

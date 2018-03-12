@@ -1,22 +1,21 @@
-import { NumberTuple } from './types'
+import { Position, Ranges, Size } from './types'
 
 export default interface CollectionViewLayout {
 
-  getContentSize(count: number, containerSize: NumberTuple): NumberTuple
+  getContentSize(count: number, containerSize: Size): Size
 
-  getIndices(xOffsets: NumberTuple,
-             yOffsets: NumberTuple,
+  getIndices(ranges: Ranges,
              count: number,
-             containerSize: NumberTuple): number[]
+             containerSize: Size): number[]
 
-  getElementPosition(index: number): NumberTuple
+  getElementPosition(index: number): Position
 
   configureElement(element: HTMLElement, index: number): void
 
-  convertPositionInSize(position: NumberTuple,
-                        newContainerSize: NumberTuple,
-                        oldLayout: CollectionViewLayout): NumberTuple
+  convertPositionInSize(position: Position,
+                        newContainerSize: Size,
+                        oldLayout: CollectionViewLayout): Position
 
-  updateContainerSize?(containerSize: NumberTuple): void
+  updateContainerSize?(containerSize: Size): void
 
 }
