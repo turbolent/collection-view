@@ -4,15 +4,9 @@ import { Line, Position, Range, Ranges, Size } from './types'
 import { assert, coalesce, intersect, range, sort, unique } from './utils'
 import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
+import CollectionViewDelegate from './delegate'
 
 const TRANSITION_END_EVENT = 'transitionend'
-
-export interface CollectionViewDelegate {
-  getCount(): number
-  configureElement(element: HTMLElement, index: number): void
-  invalidateElement?(element: HTMLElement, index: number): void
-  onScroll?(collectionView: CollectionView): void
-}
 
 export interface CollectionViewThresholds {
   readonly left: number
