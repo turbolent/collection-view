@@ -1,12 +1,10 @@
 
 export class Position {
-  readonly x: number
-  readonly y: number
 
-  constructor(x: number, y: number) {
-    this.x = x
-    this.y = y
-  }
+  constructor(
+    readonly x: number,
+    readonly y: number
+  ) {}
 
   map(f: (coordinate: number) => number) {
     const newX = f(this.x)
@@ -28,7 +26,7 @@ export class Position {
   }
 
   toString() {
-    return `Position(${this.x}, ${this.y})`
+    return `Position(x=${this.x}, y=${this.y})`
   }
 
   static in(direction: Direction, first: number, second: number) {
@@ -39,27 +37,23 @@ export class Position {
 }
 
 export class Line {
-  readonly start: Position
-  readonly end: Position
 
-  constructor(start: Position, end: Position) {
-    this.start = start
-    this.end = end
-  }
+  constructor(
+    readonly start: Position,
+    readonly end: Position
+  ) {}
 
   toString() {
-    return `Line(${this.start}, ${this.end})`
+    return `Line(start=${this.start}, end=${this.end})`
   }
 }
 
 export class Size {
-  readonly width: number
-  readonly height: number
 
-  constructor(width: number, height: number) {
-    this.width = width
-    this.height = height
-  }
+  constructor(
+    readonly width: number,
+    readonly height: number
+  ) {}
 
   get(direction: Direction) {
     return direction === Direction.HORIZONTAL
@@ -68,7 +62,7 @@ export class Size {
   }
 
   toString() {
-    return `Size(${this.width}, ${this.height})`
+    return `Size(width=${this.width}, height=${this.height})`
   }
 
   static in(direction: Direction, first: number, second: number) {
@@ -79,27 +73,23 @@ export class Size {
 }
 
 export class Range {
-  readonly start: number
-  readonly end: number
 
-  constructor(start: number, end: number) {
-    this.start = start
-    this.end = end
-  }
+  constructor(
+    readonly start: number,
+    readonly end: number
+  ) {}
 
   toString() {
-    return `Range(${this.start}, ${this.end})`
+    return `Range(start=${this.start}, end=${this.end})`
   }
 }
 
 export class Ranges {
-  readonly horizontal: Range
-  readonly vertical: Range
 
-  constructor(horizontal: Range, vertical: Range) {
-    this.horizontal = horizontal
-    this.vertical = vertical
-  }
+  constructor(
+    readonly horizontal: Range,
+    readonly vertical: Range
+  ) {}
 
   get(direction: Direction): Range {
     return direction === Direction.HORIZONTAL
@@ -108,22 +98,18 @@ export class Ranges {
   }
 
   toString() {
-    return `Ranges(${this.horizontal}, ${this.vertical})`
+    return `Ranges(horizontal=${this.horizontal}, vertical=${this.vertical})`
   }
 }
 
 export class Insets {
-  readonly top: number
-  readonly bottom: number
-  readonly left: number
-  readonly right: number
 
-  constructor(top: number, bottom: number, left: number, right: number) {
-    this.top = top
-    this.bottom = bottom
-    this.left = left
-    this.right = right
-  }
+  constructor(
+    readonly top: number,
+    readonly bottom: number,
+    readonly left: number,
+    readonly right: number
+  ) {}
 
   getStart(direction: Direction): number {
     return direction === Direction.HORIZONTAL
@@ -143,13 +129,11 @@ export class Insets {
 }
 
 export class Spacing {
-  readonly horizontal: number
-  readonly vertical: number
 
-  constructor(horizontal: number, vertical: number) {
-    this.horizontal = horizontal
-    this.vertical = vertical
-  }
+  constructor(
+    readonly horizontal: number,
+    readonly vertical: number
+  ) {}
 
   get(direction: Direction): number {
     return direction === Direction.HORIZONTAL
@@ -158,7 +142,7 @@ export class Spacing {
   }
 
   toString() {
-    return `Spacing(${this.horizontal}, ${this.vertical})`
+    return `Spacing(horizontal=${this.horizontal}, vertical=${this.vertical})`
   }
 }
 
