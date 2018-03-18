@@ -30,8 +30,9 @@ export interface CollectionViewParameters {
   readonly positionImprovementOffset?: number
 }
 
-
 class InvalidArgumentError extends Error {}
+
+class Operation {}
 
 export default class CollectionView {
   private static readonly EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
@@ -58,7 +59,7 @@ export default class CollectionView {
   private _onResize: () => void
   private _container: HTMLElement
   private _layout: CollectionViewLayout
-  private _currentOperation: {} = {}
+  private _currentOperation?: Operation
 
   readonly content: HTMLElement
   readonly delegate: CollectionViewDelegate
@@ -550,12 +551,8 @@ export default class CollectionView {
 
       this.updateContainerSize(newLayout)
 
-      // reposition (NOTE: setTimeout important)
-      setTimeout(() => {
-        if (!this.isCurrentOperation(operation)) {
-          reject()
-          return
-        }
+      // reposition (NOTE: delay important)
+      this.delayForOperation(operation, reject, () => {
 
         this.repositionVisibleElements(newLayout, false)
 
@@ -566,11 +563,7 @@ export default class CollectionView {
 
         this._layout = newLayout
 
-        setTimeout(() => {
-          if (!this.isCurrentOperation(operation)) {
-            reject()
-            return
-          }
+        this.delayForOperation(operation, reject, () => {
 
           this.updateCurrentIndices()
 
@@ -704,6 +697,7 @@ export default class CollectionView {
 
           // NOTE: notify delegate about invalidation after element was removed
           // (animation finished), not immediately when stopping to keep track of it
+          // NOTE: no need to check for current operation!
           setTimeout(() => {
                        this.removeFromParent(element)
                        if (this.delegate.invalidateElement) {
@@ -815,14 +809,10 @@ export default class CollectionView {
 
       // reposition
 
-      promises.push(new Promise<void>(resolve => {
+      promises.push(new Promise<void>((resolve, reject) => {
 
-        // NOTE: setTimeout important
-        setTimeout(() => {
-          if (!this.isCurrentOperation(operation)) {
-            reject()
-            return
-          }
+        // NOTE: delay important
+        this.delayForOperation(operation, reject, () => {
 
           this.repositionVisibleElements(this._layout, true)
 
@@ -830,11 +820,7 @@ export default class CollectionView {
             this._container.addEventListener('scroll', this.onScroll, false)
           }
 
-          setTimeout(() => {
-            if (!this.isCurrentOperation(operation)) {
-              reject()
-              return
-            }
+          this.delayForOperation(operation, reject, () => {
 
             if (countDifference < 0) {
               this.updateContentSize(this._layout)
@@ -849,17 +835,34 @@ export default class CollectionView {
       }))
 
       Promise.all(promises)
-        .then(() => resolve())
+        .then(() => resolve(), reject)
     })
   }
 
-  private startOperation(): {} {
-    const operation = {}
+  private startOperation(): Operation {
+    const operation = new Operation()
     this._currentOperation = operation
     return operation
   }
 
-  private isCurrentOperation(operation: {}): boolean {
-    return this._currentOperation === operation
+  private checkCurrentOperation(operation: Operation, reject: () => void): boolean {
+    if (this._currentOperation === operation) {
+      return true
+    }
+
+    reject()
+    return false
+  }
+
+  private delayForOperation(operation: Operation,
+                            reject: () => void,
+                            func: () => void, duration: number): void {
+    setTimeout(() => {
+      if (!this.checkCurrentOperation(operation, reject)) {
+        return
+      }
+
+      func()
+    }, duration)
   }
 }
