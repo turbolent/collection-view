@@ -192,7 +192,7 @@ The layout object is responsible for defining the size of the collection view co
 
   Return the width and height of the whole content, i.e. the space that all elements occupy, not just the content that is currently visible.
 
-  Similar to [`UICollectionViewLayout.collectionViewContentSize`]https://developer.apple.com/documentation/uikit/uicollectionviewlayout/1617796-collectionviewcontentsize)
+  Similar to [`UICollectionViewLayout.collectionViewContentSize`](https://developer.apple.com/documentation/uikit/uicollectionviewlayout/1617796-collectionviewcontentsize)
 
 - **updateContainerSize(containerSize: _Size_)** (optional)
 
