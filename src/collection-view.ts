@@ -4,7 +4,6 @@ import { Line, Position, Range, Ranges, Size } from './types'
 import { assert, coalesce, intersect, range, sort, unique } from './utils'
 import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
-import { Queue } from './queue'
 import CollectionViewDelegate from './delegate'
 
 const TRANSITION_END_EVENT = 'transitionend'
@@ -31,8 +30,9 @@ export interface CollectionViewParameters {
   readonly positionImprovementOffset?: number
 }
 
-
 class InvalidArgumentError extends Error {}
+
+class Operation {}
 
 export default class CollectionView {
   private static readonly EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
@@ -59,7 +59,7 @@ export default class CollectionView {
   private _onResize: () => void
   private _container: HTMLElement
   private _layout: CollectionViewLayout
-  private _queue = new Queue()
+  private _currentOperation?: Operation
 
   readonly content: HTMLElement
   readonly delegate: CollectionViewDelegate
@@ -166,7 +166,7 @@ export default class CollectionView {
                                elementHandler(element))
     }
 
-    this._elements.forEach(element => this.removeElement(element))
+    this._elements.forEach(element => this.removeFromParent(element))
   }
 
   private get currentContainerSize(): Size {
@@ -292,7 +292,7 @@ export default class CollectionView {
       if (element == null) {
         return
       }
-      this.removeElement(element)
+      this.removeFromParent(element)
     })
   }
 
@@ -499,7 +499,9 @@ export default class CollectionView {
   }
 
   public updateLayout(newLayout: CollectionViewLayout, animated: boolean = true): Promise<void> {
-    return this._queue.queue(resolve => {
+    return new Promise<void>((resolve, reject) => {
+      const operation = this.startOperation()
+
       this._container.removeEventListener('scroll', this.onScroll, false)
 
       // update with elements that will be visible after resize
@@ -549,8 +551,8 @@ export default class CollectionView {
 
       this.updateContainerSize(newLayout)
 
-      // reposition (NOTE: setTimeout important)
-      setTimeout(() => {
+      // reposition (NOTE: delay important)
+      this.delayForOperation(operation, reject, () => {
 
         this.repositionVisibleElements(newLayout, false)
 
@@ -561,8 +563,8 @@ export default class CollectionView {
 
         this._layout = newLayout
 
-        // TODO: don't run if layout is updated midflight
-        setTimeout(() => {
+        this.delayForOperation(operation, reject, () => {
+
           this.updateCurrentIndices()
 
           if (this._installed) {
@@ -599,7 +601,7 @@ export default class CollectionView {
     }
   }
 
-  private removeElement(element: HTMLElement) {
+  private removeFromParent(element: HTMLElement) {
     const parent = element.parentElement
     if (!parent) {
       return
@@ -608,8 +610,13 @@ export default class CollectionView {
     parent.removeChild(element)
   }
 
-  public changeIndices(removedIndices: number[], addedIndices: number[], movedIndexMap: Map<number, number>): Promise<void> {
-    return this._queue.queue(resolve => {
+  public changeIndices(removedIndices: number[],
+                       addedIndices: number[],
+                       movedIndexMap: Map<number, number>,
+                       animated: boolean = true): Promise<void> {
+
+    return new Promise<void>((resolve, reject) => {
+      const operation = this.startOperation()
 
       const promises: Promise<void>[] = []
 
@@ -690,8 +697,9 @@ export default class CollectionView {
 
           // NOTE: notify delegate about invalidation after element was removed
           // (animation finished), not immediately when stopping to keep track of it
+          // NOTE: no need to check for current operation!
           setTimeout(() => {
-                       this.removeElement(element)
+                       this.removeFromParent(element)
                        if (this.delegate.invalidateElement) {
                          this.delegate.invalidateElement(element, index)
                        }
@@ -801,10 +809,10 @@ export default class CollectionView {
 
       // reposition
 
-      promises.push(new Promise<void>(resolve => {
+      promises.push(new Promise<void>((resolve, reject) => {
 
-        // NOTE: setTimeout important
-        setTimeout(() => {
+        // NOTE: delay important
+        this.delayForOperation(operation, reject, () => {
 
           this.repositionVisibleElements(this._layout, true)
 
@@ -812,7 +820,8 @@ export default class CollectionView {
             this._container.addEventListener('scroll', this.onScroll, false)
           }
 
-          setTimeout(() => {
+          this.delayForOperation(operation, reject, () => {
+
             if (countDifference < 0) {
               this.updateContentSize(this._layout)
             }
@@ -820,14 +829,40 @@ export default class CollectionView {
             this.updateCurrentIndices()
 
             resolve()
-          }, this.animationDuration)
+          }, animated ? this.animationDuration : 0)
 
         }, 0)
       }))
 
       Promise.all(promises)
-        .then(() => resolve())
+        .then(() => resolve(), reject)
     })
   }
 
+  private startOperation(): Operation {
+    const operation = new Operation()
+    this._currentOperation = operation
+    return operation
+  }
+
+  private checkCurrentOperation(operation: Operation, reject: () => void): boolean {
+    if (this._currentOperation === operation) {
+      return true
+    }
+
+    reject()
+    return false
+  }
+
+  private delayForOperation(operation: Operation,
+                            reject: () => void,
+                            func: () => void, duration: number): void {
+    setTimeout(() => {
+      if (!this.checkCurrentOperation(operation, reject)) {
+        return
+      }
+
+      func()
+    }, duration)
+  }
 }

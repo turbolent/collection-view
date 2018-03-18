@@ -48,7 +48,7 @@ declare const delegate: CollectionViewDelegate
 declare const collectionView: CollectionView
 declare const wrapperElement: HTMLDivElement
 declare const newGridLayout: (params: GridLayoutParameters) => GridLayout
-declare const Size: (width: number, height: number) => ImportedSize
+declare const Size: typeof ImportedSize
 
 async function getElements(): Promise<ElementHandle[]> {
   return await page.$$('#scroll div')
@@ -92,6 +92,9 @@ async function expectElements(expected: [number, number, string][], size: [numbe
     .toEqual(expectedBoundingBoxesAndContents)
 }
 
+function wait(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 describe("Collection View with default Grid Layout", () => {
 
@@ -245,7 +248,8 @@ describe("Collection View with default Grid Layout", () => {
     )
   });
 
-  test("change layout", async () => {
+  test("change elements, one interruption", async () => {
+    const animationDuration = await page.evaluate(() => collectionView.animationDuration)
 
     // add initial elements
     await page.evaluate(() => {
@@ -255,7 +259,118 @@ describe("Collection View with default Grid Layout", () => {
       return collectionView.changeIndices([], addedIndices, new Map())
     })
 
-    // change layout
+    // change elements
+    // NOTE: not waiting, this promise is checked later
+    const firstUpdate = page.evaluate(() => {
+      delegate.items = [ 1, 15, 16, 3, 6, 8, 4, 10, 11, 12, 13, 14 ]
+      return collectionView.changeIndices([ 1, 4, 6, 8 ],
+                                          [ 1, 2 ],
+                                          new Map([[3, 6]]))
+      // recover cancellation as promise resolution which can be checked
+        .catch(() => Promise.resolve('update failed'))
+    })
+
+    // wait for half of the first update to complete
+    await wait(animationDuration * 0.5)
+
+    // change the elements back to the initial state
+    await page.evaluate(() => {
+      delegate.items = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      return collectionView.changeIndices([1, 2], [1, 4, 6, 8], new Map([[6, 3]]))
+    })
+
+    // check the elements were changed back properly
+    await expectElements(
+      [
+        [ 80, 10, '1' ], [ 300, 10, '2' ], [ 520, 10, '3' ],
+        [ 80, 230, '4' ], [ 300, 230, '5' ], [ 520, 230, '6' ],
+        [ 80, 450, '7' ], [ 300, 450, '8' ], [ 520, 450, '9' ]
+      ],
+      [ 200, 200 ]
+    )
+
+    // the first update should have failed
+    expect(await firstUpdate).toEqual('update failed')
+  });
+
+  test("change elements, multiple interruptions", async () => {
+
+    const animationDuration = await page.evaluate(() => collectionView.animationDuration)
+
+    // add initial elements
+    await page.evaluate(() => {
+      const initialElements = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      delegate.items = initialElements.slice()
+      const addedIndices = initialElements.map((_, index) => index)
+      return collectionView.changeIndices([], addedIndices, new Map())
+    })
+
+    // change elements; will not complete successfully,
+    // as it will be interrupted by a following change
+    // NOTE: not waiting, this promise is checked later
+    const firstUpdate = page.evaluate(() => {
+      delegate.items = [ 1, 15, 16, 3, 6, 8, 4, 10, 11, 12, 13, 14 ]
+      return collectionView.changeIndices([ 1, 4, 6, 8 ],
+                                          [ 1, 2 ],
+                                          new Map([[3, 6]]))
+      // recover cancellation as promise resolution which can be checked
+        .catch(() => Promise.resolve('first update failed'))
+    })
+
+    // wait for half of the first update to complete
+    await wait(animationDuration * 0.5)
+
+    // change the elements back to the initial state;
+    // will not complete successfully either,
+    // as it will also be interrupted by a following change
+    // NOTE: not waiting, this promise is checked later
+    const secondUpdate = page.evaluate(() => {
+      delegate.items = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      return collectionView.changeIndices([1, 2], [1, 4, 6, 8], new Map([[6, 3]]))
+      // recover cancellation as promise resolution which can be checked
+        .catch(() => Promise.resolve('second update failed'))
+    })
+
+    // wait for half of the second update to complete
+    await wait(animationDuration * 0.5)
+
+    // change elements again; will complete successfully
+    // NOTE: waiting, this promise should succeed
+    await page.evaluate(() => {
+      delegate.items = [ 1, 15, 16, 3, 6, 8, 4, 10, 11, 12, 13, 14 ]
+      return collectionView.changeIndices([ 1, 4, 6, 8 ],
+                                          [ 1, 2 ],
+                                          new Map([ [ 3, 6 ] ]))
+    });
+
+    // check the elements were changed properly
+    await expectElements(
+      [
+        [ 80, 10, '1' ], [ 300, 10, '15' ], [ 520, 10, '16' ],
+        [ 80, 230, '3' ], [ 300, 230, '6' ], [ 520, 230, '8' ],
+        [ 80, 450, '4' ], [ 300, 450, '10' ], [ 520, 450, '11' ]
+      ],
+      [ 200, 200 ]
+    )
+
+    // the first update should have failed
+    expect(await firstUpdate).toEqual('first update failed')
+
+    // the second update should have also failed
+    expect(await secondUpdate).toEqual('second update failed')
+  });
+
+  test("update layout", async () => {
+
+    // add initial elements
+    await page.evaluate(() => {
+      const initialElements = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      delegate.items = initialElements.slice()
+      const addedIndices = initialElements.map((_, index) => index)
+      return collectionView.changeIndices([], addedIndices, new Map())
+    })
+
+    // update layout
     await page.evaluate(() => {
       return collectionView.updateLayout(newGridLayout({itemSize: new Size(300, 300)}))
     })
@@ -269,7 +384,7 @@ describe("Collection View with default Grid Layout", () => {
       [ 300, 300 ]
     )
 
-    // change the layout back to the initial state
+    // update the layout back to the initial state
     await page.evaluate(() => {
       return collectionView.updateLayout(newGridLayout({itemSize: new Size(200, 200)}))
     })
@@ -285,9 +400,9 @@ describe("Collection View with default Grid Layout", () => {
     )
   });
 
-  test("change layout at bottom", async () => {
+  test("update layout at bottom", async () => {
 
-    // change layout
+    // update layout
     await page.evaluate(() => {
       return collectionView.updateLayout(newGridLayout({itemSize: new Size(260, 260)}))
     })
@@ -305,7 +420,7 @@ describe("Collection View with default Grid Layout", () => {
        wrapperElement.scrollTo(0, wrapperElement.scrollHeight)
     })
 
-    // change layout
+    // update layout
     await page.evaluate(() => {
       return collectionView.updateLayout(newGridLayout({itemSize: new Size(180, 180)}))
     })
@@ -320,5 +435,106 @@ describe("Collection View with default Grid Layout", () => {
       [ 180, 180 ]
     )
   })
-})
 
+  test("update layout, one interruption", async () => {
+
+    const animationDuration = await page.evaluate(() => collectionView.animationDuration)
+
+    // add initial elements
+    await page.evaluate(() => {
+      const initialElements = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      delegate.items = initialElements.slice()
+      const addedIndices = initialElements.map((_, index) => index)
+      return collectionView.changeIndices([], addedIndices, new Map())
+
+    })
+
+    // update layout
+    // NOTE: not waiting, this promise is checked later
+    const firstUpdate = page.evaluate(() => {
+      return collectionView.updateLayout(newGridLayout({itemSize: new Size(300, 300)}))
+         // recover cancellation as promise resolution which can be checked
+        .catch(() => Promise.resolve('update failed'))
+    })
+
+    // wait for half of the first update to complete
+    await wait(animationDuration * 0.5)
+
+    // update the layout back to the initial state
+    await page.evaluate(() => {
+      return collectionView.updateLayout(newGridLayout({itemSize: new Size(200, 200)}))
+    })
+
+    // check the elements were changed properly
+    await expectElements(
+      [
+        [ 80, 10, '1' ], [ 300, 10, '2' ], [ 520, 10, '3' ],
+        [ 80, 230, '4' ], [ 300, 230, '5' ], [ 520, 230, '6' ],
+        [ 80, 450, '7' ], [ 300, 450, '8' ], [ 520, 450, '9' ]
+      ],
+      [ 200, 200 ]
+    )
+
+    // the first update should have failed
+    expect(await firstUpdate).toEqual('update failed')
+  });
+
+  test("update layout, multiple interruptions", async () => {
+
+    const animationDuration = await page.evaluate(() => collectionView.animationDuration)
+
+    // add initial elements
+    await page.evaluate(() => {
+      const initialElements = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      delegate.items = initialElements.slice()
+      const addedIndices = initialElements.map((_, index) => index)
+      return collectionView.changeIndices([], addedIndices, new Map())
+
+    })
+
+    // update layout; will not complete successfully,
+    // as it will be interrupted by a following update
+    // NOTE: not waiting, this promise is checked later
+    const firstUpdate = page.evaluate(() => {
+      return collectionView.updateLayout(newGridLayout({itemSize: new Size(300, 300)}))
+        // recover cancellation as promise resolution which can be checked
+        .catch(() => Promise.resolve('first update failed'))
+    })
+
+    await wait(animationDuration * 0.5)
+
+    // update the layout back to the initial state;
+    // will not complete successfully either,
+    // as it will also be interrupted by a following update
+    // NOTE: not waiting, this promise is checked later
+    const secondUpdate = page.evaluate(() => {
+      return collectionView.updateLayout(newGridLayout({itemSize: new Size(200, 200)}))
+        // recover cancellation as promise resolution which can be checked
+        .catch(() => Promise.resolve('second update failed'))
+    })
+
+    // wait for half of the first update to complete
+    await wait(animationDuration * 0.5)
+
+    // update layout again; will complete successfully
+    // NOTE: waiting, this promise should succeed
+    await page.evaluate(() => {
+      return collectionView.updateLayout(newGridLayout({itemSize: new Size(300, 300)}))
+    })
+
+    // check the elements were changed properly
+    await expectElements(
+      [
+        [ 90, 10, '1'], [ 410, 10, '2'],
+        [ 90, 330, '3'], [ 410, 330, '4']
+      ],
+      [ 300, 300 ]
+    )
+
+    // the first update should have failed
+    expect(await firstUpdate).toEqual('first update failed')
+
+    // the second update should have also failed
+    expect(await secondUpdate).toEqual('second update failed')
+  });
+})
