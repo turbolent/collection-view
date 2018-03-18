@@ -4,15 +4,10 @@ import { Line, Position, Range, Ranges, Size } from './types'
 import { assert, coalesce, intersect, range, sort, unique } from './utils'
 import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
+import { Queue } from './queue'
+import CollectionViewDelegate from './delegate'
 
 const TRANSITION_END_EVENT = 'transitionend'
-
-export interface CollectionViewDelegate {
-  getCount(): number
-  configureElement(element: HTMLElement, index: number): void
-  invalidateElement?(element: HTMLElement, index: number): void
-  onScroll?(collectionView: CollectionView): void
-}
 
 export interface CollectionViewThresholds {
   readonly left: number
@@ -64,6 +59,7 @@ export default class CollectionView {
   private _onResize: () => void
   private _container: HTMLElement
   private _layout: CollectionViewLayout
+  private _queue = new Queue()
 
   readonly content: HTMLElement
   readonly delegate: CollectionViewDelegate
@@ -166,12 +162,11 @@ export default class CollectionView {
     window.removeEventListener('resize', this._onResize, false)
 
     if (elementHandler) {
-      this._elements.forEach((element) =>
+      this._elements.forEach(element =>
                                elementHandler(element))
     }
 
-    this._elements.forEach((element) =>
-                             this.removeElement(element))
+    this._elements.forEach(element => this.removeElement(element))
   }
 
   private get currentContainerSize(): Size {
@@ -278,22 +273,22 @@ export default class CollectionView {
 
     // add missing elements
     const currentIndices = this._visibleIndices
-    newIndices.filter((index) => currentIndices.indexOf(index) < 0)
-              .forEach((index) => {
-                // reuse one of the invalid/old elements, or create a new element
-                const element = invalidElements.pop()
-                  || this.createAndAddElement()
-                this.configureElement(this._layout, element, index)
-                this.getAndApplyElementPosition(this._layout, element, index)
-                element.classList.remove(this.repositioningClassName)
+    newIndices.filter(index => currentIndices.indexOf(index) < 0)
+      .forEach(index => {
+        // reuse one of the invalid/old elements, or create a new element
+        const element = invalidElements.pop()
+          || this.createAndAddElement()
+        this.configureElement(this._layout, element, index)
+        this.getAndApplyElementPosition(this._layout, element, index)
+        element.classList.remove(this.repositioningClassName)
 
-                assert(() => index >= 0)
-                this._elements.set(index, element)
-              })
+        assert(() => index >= 0)
+        this._elements.set(index, element)
+      })
     this._visibleIndices = newIndices
 
     // actually remove old elements, which weren't reused
-    invalidElements.forEach((element) => {
+    invalidElements.forEach(element => {
       if (element == null) {
         return
       }
@@ -503,10 +498,8 @@ export default class CollectionView {
       })
   }
 
-  public updateLayout(newLayout: CollectionViewLayout): Promise<void> {
-
-    return new Promise(resolve => {
-
+  public updateLayout(newLayout: CollectionViewLayout, animated: boolean = true): Promise<void> {
+    return this._queue.queue(resolve => {
       this._container.removeEventListener('scroll', this.onScroll, false)
 
       // update with elements that will be visible after resize
@@ -543,8 +536,9 @@ export default class CollectionView {
       const diffY = Math.round(newPosition.y - this._scrollPosition.y)
 
       if (diffX || diffY) {
-        this._elements.forEach((element) =>
-                                 element.style.transform += ` translate3d(${diffX}px, ${diffY}px, 0)`)
+        this._elements.forEach(element => {
+          element.style.transform += ` translate3d(${diffX}px, ${diffY}px, 0)`
+        })
       }
 
       this.updateContentSize(newLayout)
@@ -576,34 +570,33 @@ export default class CollectionView {
           }
 
           resolve()
-        }, this.animationDuration)
+        }, animated ? this.animationDuration : 0)
       }, 0)
     })
   }
 
-  public scrollTo({x, y}: Position): void {
-    this._container.scrollLeft = x
-    this._container.scrollTop = y
-  }
+  public scrollTo({x: toX, y: toY}: Position, animated: boolean = false): void {
+    if (animated) {
+      const start = Date.now()
+      const {x: fromX, y: fromY} = this.currentScrollPosition
+      const easing = CollectionView.EASING
+      const scroll = () => {
+        const now = Date.now()
+        const progress = Math.min(1, (now - start) / this.animationDuration)
+        const easedProgress = easing(progress)
+        const targetX = fromX + easedProgress * (toX - fromX)
+        const targetY = fromY + easedProgress * (toY - fromY)
+        this.scrollTo(new Position(targetX, targetY), false)
 
-  public animatedScrollTo({x: toX, y: toY}: Position): void {
-    const start = Date.now()
-    const {x: fromX, y: fromY} = this.currentScrollPosition
-    const easing = CollectionView.EASING
-    const scroll = () => {
-      const now = Date.now()
-      const progress = Math.min(1, (now - start) / this.animationDuration)
-      const easedProgress = easing(progress)
-      const targetX = fromX + easedProgress * (toX - fromX)
-      const targetY = fromY + easedProgress * (toY - fromY)
-      this.scrollTo(new Position(targetX, targetY))
-
-      if (progress < 1) {
-        requestAnimationFrame(scroll)
+        if (progress < 1) {
+          requestAnimationFrame(scroll)
+        }
       }
+      requestAnimationFrame(scroll)
+    } else {
+      this._container.scrollLeft = toX
+      this._container.scrollTop = toY
     }
-
-    requestAnimationFrame(scroll)
   }
 
   private removeElement(element: HTMLElement) {
@@ -616,7 +609,7 @@ export default class CollectionView {
   }
 
   public changeIndices(removedIndices: number[], addedIndices: number[], movedIndexMap: Map<number, number>): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return this._queue.queue(resolve => {
 
       const promises: Promise<void>[] = []
 
@@ -635,7 +628,7 @@ export default class CollectionView {
 
       const oldMovedIndices = Array.from(movedIndexMap.keys())
       const reverseMovedIndexMap = new Map<number, number>()
-      oldMovedIndices.forEach((oldIndex) => {
+      oldMovedIndices.forEach(oldIndex => {
         // TODO: assert
         const newIndex = movedIndexMap.get(oldIndex) as number
         reverseMovedIndexMap.set(newIndex, oldIndex)
@@ -677,12 +670,12 @@ export default class CollectionView {
                          ? Math.max(0, scrollY - (bottom - newContentHeight))
                          : scrollY)
 
-        this.animatedScrollTo(this._scrollPosition)
+        this.scrollTo(this._scrollPosition, true)
       }
 
       // disappear and remove elements
 
-      removedIndices.forEach((index) => {
+      removedIndices.forEach(index => {
         assert(() => index >= 0)
 
         const element = this._elements.get(index)
@@ -722,7 +715,7 @@ export default class CollectionView {
 
       const indices = sort(Array.from(this._elements.keys()))
 
-      indices.forEach((index) => {
+      indices.forEach(index => {
         const element = this._elements.get(index) as HTMLElement
         assert(() => index >= 0)
 
@@ -758,7 +751,7 @@ export default class CollectionView {
       let removedOrMovedLoadOffset = 0
       let addedOrMovedLoadOffset = 0
 
-      finalIndices.forEach((index) => {
+      finalIndices.forEach(index => {
 
         let oldIndex: number
         const reverseMovedIndex = reverseMovedIndexMap.get(index)
@@ -834,7 +827,6 @@ export default class CollectionView {
 
       Promise.all(promises)
         .then(() => resolve())
-        .catch(e => reject(e))
     })
   }
 

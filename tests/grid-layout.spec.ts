@@ -10,15 +10,25 @@ const width = 1024
 const height = 1024
 
 beforeAll(async () => {
-  browser = await launch({
-                           headless: true,
-                           slowMo: 200,
-                           args: [
-                             `--window-size=${width},${height}`,
-                             '--no-sandbox',
-                             '--disable-setuid-sandbox'
-                           ]
-                         })
+  if (process.env.CI === 'true') {
+    browser = await launch({
+                             headless: true,
+                             slowMo: 200,
+                             args: [
+                               `--window-size=${width},${height}`,
+                               '--no-sandbox',
+                               '--disable-setuid-sandbox'
+                             ]
+                           });
+  } else {
+    browser = await launch({
+                             headless: false,
+                             slowMo: 200,
+                             args: [
+                               `--window-size=${width},${height}`,
+                             ]
+                           })
+  }
 })
 
 afterAll(async () => {
