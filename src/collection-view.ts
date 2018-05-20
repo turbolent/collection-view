@@ -839,7 +839,7 @@ export default class CollectionView {
         // TODO: include transform?
         const maxTransitionDuration =
             this.performTransition(elementIndex, element, false,
-                                   CollectionViewAnimationReason.ELEMENT_ADDITION)
+                                   CollectionViewAnimationReason.ELEMENT_REMOVAL)
 
         element.classList.add(this.disappearingClassName)
         element.style.zIndex = '0'
