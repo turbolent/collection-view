@@ -612,8 +612,14 @@ export default class CollectionView {
       const finalContentSize = newLayout.getContentSize(this._count, newContainerSize)
 
       const finalPosition = new Position(
-        newPosition.x - Math.abs(Math.min(0, finalContentSize.width - (newPosition.x + newContainerSize.width))),
-        newPosition.y - Math.abs(Math.min(0, finalContentSize.height - (newPosition.y + newContainerSize.height)))
+        Math.max(0,
+                 newPosition.x - Math.abs(Math.min(0,
+                                                   finalContentSize.width
+                                                       - (newPosition.x + newContainerSize.width)))),
+        Math.max(0,
+                 newPosition.y - Math.abs(Math.min(0,
+                                                   finalContentSize.height
+                                                       - (newPosition.y + newContainerSize.height))))
       )
 
       const finalIndices = this.getIndices(newLayout, finalPosition, newContainerSize)
