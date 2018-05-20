@@ -588,15 +588,17 @@ export default class CollectionView {
     }
     this._resizing = true
 
-    this.updateLayout(this._layout)
-      .then(() => {
-        this._resizing = false
+    const completion = () => {
+      this._resizing = false
 
-        if (this._wantsResize) {
-          this._wantsResize = false
-          this.resize()
-        }
-      })
+      if (this._wantsResize) {
+        this._wantsResize = false
+        this.resize()
+      }
+    }
+
+    this.updateLayout(this._layout)
+      .then(completion, completion)
   }
 
   public updateLayout(newLayout: CollectionViewLayout, animated: boolean = true): Promise<void> {
