@@ -23,7 +23,7 @@ beforeAll(async () => {
   } else {
     browser = await launch({
                              headless: false,
-                             slowMo: 200,
+                             slowMo: 300,
                              args: [
                                `--window-size=${width},${height}`,
                              ]
