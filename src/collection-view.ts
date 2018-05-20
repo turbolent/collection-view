@@ -404,7 +404,7 @@ export default class CollectionView {
 
       let maxElementTransitionDuration = 0
       if (animationReason) {
-        this.performTransition(elementIndex, element, true, animationReason)
+        maxElementTransitionDuration = this.performTransition(elementIndex, element, true, animationReason)
       }
       maxTransitionDuration = Math.max(maxTransitionDuration, maxElementTransitionDuration)
 
