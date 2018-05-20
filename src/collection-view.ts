@@ -828,8 +828,6 @@ export default class CollectionView {
 
         promises.push(new Promise<void>(resolve => {
 
-          // TODO: query delegate for animation duration
-
           // NOTE: notify delegate about invalidation after element was removed
           // (animation finished), not immediately when stopping to keep track of it
           // NOTE: no need to check for current operation!
