@@ -36,8 +36,23 @@ export enum CollectionViewAnimationReason {
 
 class InvalidArgumentError extends Error {}
 
+type Rejection = (reason?: any) => void
+
 class Operation {
-  constructor(readonly reject: (reason?: any) => void) {}
+
+  private readonly rejections: Rejection[] = []
+
+  constructor(reject: Rejection) {
+    this.addRejection(reject)
+  }
+
+  addRejection(reject: Rejection) {
+    this.rejections.push(reject)
+  }
+
+  reject() {
+    this.rejections.forEach(rejection => rejection())
+  }
 }
 
 class ElementAnimation {
@@ -399,6 +414,8 @@ export default class CollectionView {
 
         promises.push(new Promise<void>((resolve, reject) => {
 
+          operation.addRejection(reject)
+
           this.delayForOperation(operation, () => {
             this.configureElementTransitionProperties(element, false)
 
@@ -409,7 +426,7 @@ export default class CollectionView {
             }
 
             resolve()
-          }, maxElementTransitionDuration, reject)
+          }, maxElementTransitionDuration)
         }))
 
       })
@@ -1005,11 +1022,9 @@ export default class CollectionView {
 
   private delayForOperation(operation: Operation,
                             func: () => void,
-                            duration: number,
-                            additionalReject?: (reason?: any) => void): void {
+                            duration: number): void {
     setTimeout(() => {
       if (!this.checkCurrentOperation(operation)) {
-        additionalReject && additionalReject()
         return
       }
 
