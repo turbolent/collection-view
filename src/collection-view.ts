@@ -458,7 +458,9 @@ export default class CollectionView {
     }
 
     const elementInfo = this.layout.getElementInfo(elementIndex)
-    const animationDuration = this.delegate.getAnimationDuration(elementIndex, elementInfo, property, reason)
+    const animationDuration =
+        Math.max(0,
+                 this.delegate.getAnimationDuration(elementIndex, elementInfo, property, reason))
     return new ElementAnimation(animationDuration, property, reason, elementInfo)
   }
 
@@ -469,10 +471,11 @@ export default class CollectionView {
       return 0
     }
 
-    return this.delegate.getAnimationDelay(elementIndex,
-                                           animation.elementInfo,
-                                           animation.property,
-                                           animation.reason)
+    return Math.max(0,
+                    this.delegate.getAnimationDelay(elementIndex,
+                                                    animation.elementInfo,
+                                                    animation.property,
+                                                    animation.reason))
   }
 
   private getImprovedPositions(currentPosition: Position,
