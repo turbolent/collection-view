@@ -1,5 +1,7 @@
 # collection-view
 
+[![Build Status](https://travis-ci.org/turbolent/collection-view.svg?branch=master)](https://travis-ci.org/turbolent/collection-view)
+
 A container for displaying large ordered collections of data items and presenting them using arbitrary layouts (e.g. lists, grids). Large collections can be scrolled smoothly by displaying only a limited number of elements. This is also known as "windowing" or "virtualization". [Changes to the data](#changing-the-data) (remove, add, move) and [changes to the layout](#changing-the-layout) are properly animated by the collection view. The library is inspired by [iOS' UICollectionView](https://developer.apple.com/documentation/uikit/uicollectionview) and [Android's RecyclerView](https://developer.android.com/guide/topics/ui/layout/recyclerview.html).
 
 The collection view gets its data from a [delegate](#delegate) and gets its visual information from a layout. Currently there is a [grid layout](#grid-layout), which presents the collection in rows and columns, and a simple [list layout](#list-layout), which presents the collection in rows. [Custom layouts](#custom-layout) can be implemented easily. Contributions are welcome!
