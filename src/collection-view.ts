@@ -59,7 +59,7 @@ export default class CollectionView {
   static readonly DEFAULT_RESIZE_THROTTLE: number = 1000
   static readonly DEFAULT_POSITION_IMPROVEMENT_OFFSET: number = 100
 
-  private static readonly TRANSITION_PROPERTIES = ['width', 'height', 'opacity']
+  private static readonly NORMAL_TRANSITION_PROPERTIES = ['width', 'height', 'opacity']
 
   private _wantsResize: boolean = false
   private _resizing: boolean = false
@@ -1008,7 +1008,7 @@ export default class CollectionView {
 
   // configures the element's transition properties and returns them
   private configureElementTransitionProperties(element: HTMLElement, includeTransform: boolean): string[] {
-    const properties = CollectionView.TRANSITION_PROPERTIES
+    const properties = CollectionView.NORMAL_TRANSITION_PROPERTIES
         .concat(includeTransform ? ['transform'] : [])
     element.style.transitionProperty = properties.join(',')
     return properties
