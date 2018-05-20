@@ -1,4 +1,4 @@
-import CollectionView from './collection-view'
+import CollectionView, { CollectionViewAnimationReason } from './collection-view'
 
 export default interface CollectionViewDelegate {
   getCount(): number
@@ -8,4 +8,8 @@ export default interface CollectionViewDelegate {
   invalidateElement?(element: HTMLElement, index: number): void
 
   onScroll?(collectionView: CollectionView): void
+
+  getAnimationDuration?(index: number, info: any, property: string, reason: CollectionViewAnimationReason): number
+
+  getAnimationDelay?(index: number, info: any, property: string, reason: CollectionViewAnimationReason): number
 }

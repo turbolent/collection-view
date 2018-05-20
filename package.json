@@ -47,7 +47,8 @@
   "jest": {
     "moduleFileExtensions": [
       "ts",
-      "js"
+      "js",
+      "json"
     ],
     "transform": {
       "^.+\\.ts$": "<rootDir>/tests/preprocessor.js"

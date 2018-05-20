@@ -6,8 +6,6 @@ import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
 import CollectionViewDelegate from './delegate'
 
-const TRANSITION_END_EVENT = 'transitionend'
-
 export interface CollectionViewThresholds {
   readonly left: number
   readonly top: number
@@ -17,7 +15,6 @@ export interface CollectionViewThresholds {
 
 export interface CollectionViewParameters {
   readonly animationDuration?: number
-  readonly repositioningClassName?: string
   readonly appearingClassName?: string
   readonly disappearingClassName?: string
   readonly resizeThrottleDuration?: number
@@ -30,20 +27,52 @@ export interface CollectionViewParameters {
   readonly positionImprovementOffset?: number
 }
 
+export enum CollectionViewAnimationReason {
+  ELEMENT_ADDITION,
+  ELEMENT_REMOVAL,
+  ELEMENT_MOVE,
+  LAYOUT_UPDATE
+}
+
 class InvalidArgumentError extends Error {}
 
-class Operation {}
+type Rejection = (reason?: any) => void
+
+class Operation {
+
+  private readonly rejections: Rejection[] = []
+
+  constructor(reject: Rejection) {
+    this.addRejection(reject)
+  }
+
+  addRejection(reject: Rejection) {
+    this.rejections.push(reject)
+  }
+
+  reject() {
+    this.rejections.forEach(rejection => rejection())
+  }
+}
+
+class ElementAnimation {
+  constructor(readonly duration: number,
+              readonly property: string,
+              readonly reason: CollectionViewAnimationReason,
+              readonly elementInfo?: any) {}
+}
 
 export default class CollectionView {
   private static readonly EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
 
   static readonly DEFAULT_THRESHOLD: number = 3000
-  static readonly DEFAULT_REPOSITIONING_CLASS_NAME: string = 'repositioning'
   static readonly DEFAULT_APPEARING_CLASS_NAME: string= 'appearing'
   static readonly DEFAULT_DISAPPEARING_CLASS_NAME: string = 'disappearing'
   static readonly DEFAULT_ANIMATION_DURATION: number = 400
   static readonly DEFAULT_RESIZE_THROTTLE: number = 1000
   static readonly DEFAULT_POSITION_IMPROVEMENT_OFFSET: number = 100
+
+  private static readonly NORMAL_TRANSITION_PROPERTIES = ['width', 'height', 'opacity']
 
   private _wantsResize: boolean = false
   private _resizing: boolean = false
@@ -65,7 +94,6 @@ export default class CollectionView {
   readonly delegate: CollectionViewDelegate
 
   readonly animationDuration: number
-  readonly repositioningClassName: string
   readonly appearingClassName: string
   readonly disappearingClassName: string
   readonly thresholds: CollectionViewThresholds
@@ -107,8 +135,7 @@ export default class CollectionView {
 
     this.animationDuration = coalesce(parameters.animationDuration,
                                       CollectionView.DEFAULT_ANIMATION_DURATION)
-    this.repositioningClassName = coalesce(parameters.repositioningClassName,
-                                           CollectionView.DEFAULT_REPOSITIONING_CLASS_NAME)
+
     this.appearingClassName = coalesce(parameters.appearingClassName,
                                        CollectionView.DEFAULT_APPEARING_CLASS_NAME)
     this.disappearingClassName = coalesce(parameters.disappearingClassName,
@@ -280,7 +307,8 @@ export default class CollectionView {
           || this.createAndAddElement()
         this.configureElement(this._layout, element, index)
         this.getAndApplyElementPosition(this._layout, element, index)
-        element.classList.remove(this.repositioningClassName)
+
+        // TODO: this.configureElementTransitionProperties(element, false) ?
 
         assert(() => index >= 0)
         this._elements.set(index, element)
@@ -321,62 +349,150 @@ export default class CollectionView {
   private createAndAddElement(): HTMLElement {
     const element = document.createElement('div')
     element.classList.add(style.element)
+
+    this.configureElementTransitionProperties(element, false)
+
     this.content.appendChild(element)
     return element
   }
 
   // TODO: assumes sizes are constant
-  private repositionVisibleElements(layout: CollectionViewLayout, improvePositions: boolean): void {
+  private repositionVisibleElements(layout: CollectionViewLayout,
+                                    improvePositions: boolean,
+                                    operation: Operation,
+                                    animationReason?: CollectionViewAnimationReason): Promise<void> {
 
-    this._elements.forEach((element, index) => {
-      assert(() => index >= 0)
+    return new Promise<void>((resolve, reject) => {
 
-      const finalPosition = this.getElementPosition(layout, index)
-      const currentPosition = this._positions.get(element)
+      const promises: Promise<void>[] = []
 
-      if (!currentPosition) {
-        throw Error("missing position for element: " + element)
-      }
+      this._elements.forEach((element, elementIndex) => {
+        assert(() => elementIndex >= 0)
 
-      if (finalPosition.equals(currentPosition)) {
-        return
-      }
+        const finalPosition = this.getElementPosition(layout, elementIndex)
+        const currentPosition = this._positions.get(element)
 
-      const size = new Size(element.offsetWidth, element.offsetHeight)
-
-      const improvedPositions = improvePositions
-        ? this.getImprovedPositions(currentPosition, finalPosition, size)
-        : undefined
-
-      if (improvedPositions !== undefined) {
-        const improvedStartPosition = improvedPositions[0]
-        if (improvedStartPosition !== undefined) {
-          this.applyElementPosition(element, improvedStartPosition, index)
-          element.getBoundingClientRect()
+        if (!currentPosition) {
+          throw Error("missing position for element: " + element)
         }
-      }
 
-      let improvedEndPosition: Position | undefined
-      if (improvedPositions !== undefined) {
-        improvedEndPosition = improvedPositions[1]
-      }
-
-      const onTransitionEnd = () => {
-        element.removeEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
-        element.classList.remove(this.repositioningClassName)
-        if (improvedEndPosition !== undefined) {
-          this.applyElementPosition(element, finalPosition, index)
+        if (finalPosition.equals(currentPosition)) {
+          return
         }
-      }
 
-      element.addEventListener(TRANSITION_END_EVENT, onTransitionEnd, false)
-      element.classList.add(this.repositioningClassName)
+        const size = new Size(element.offsetWidth,
+                              element.offsetHeight)
 
-      const temporaryEndPosition = improvedEndPosition !== undefined
-        ? improvedEndPosition
-        : finalPosition
-      this.applyElementPosition(element, temporaryEndPosition, index)
+        const improvedPositions = improvePositions
+            ? this.getImprovedPositions(currentPosition, finalPosition, size)
+            : undefined
+
+        if (improvedPositions !== undefined) {
+          const improvedStartPosition = improvedPositions[ 0 ]
+          if (improvedStartPosition !== undefined) {
+            this.applyElementPosition(element, improvedStartPosition, elementIndex)
+            element.getBoundingClientRect()
+          }
+        }
+
+        let improvedEndPosition: Position | undefined
+        if (improvedPositions !== undefined) {
+          improvedEndPosition = improvedPositions[ 1 ]
+        }
+
+        let maxElementTransitionDuration = 0
+        if (animationReason) {
+          maxElementTransitionDuration = this.performTransition(elementIndex, element, true, animationReason)
+        }
+
+        // TODO: invoke onTransitionEnd right away if maxElementTransitionDuration == 0, as it won't be called otherwise?
+
+        const temporaryEndPosition = improvedEndPosition !== undefined
+            ? improvedEndPosition
+            : finalPosition
+        this.applyElementPosition(element, temporaryEndPosition, elementIndex)
+
+        promises.push(new Promise<void>((resolve, reject) => {
+
+          operation.addRejection(reject)
+
+          this.delayForOperation(operation, () => {
+            this.configureElementTransitionProperties(element, false)
+
+            // TODO: also configureElementTransitionDurations and configureElementTransitionDelays ?
+
+            if (improvedEndPosition !== undefined) {
+              this.applyElementPosition(element, finalPosition, elementIndex)
+            }
+
+            resolve()
+          }, maxElementTransitionDuration)
+        }))
+
+      })
+
+      Promise.all(promises)
+          .then(() => resolve(), reject)
     })
+  }
+
+  // configures element's transition properties, delays, and durations.
+  // returns total duration (max delay + max duration)
+  private performTransition(elementIndex: number,
+                            element: HTMLElement,
+                            includeTransform: boolean,
+                            animationReason: CollectionViewAnimationReason): number {
+
+    const properties = this.configureElementTransitionProperties(element, includeTransform)
+    const animations = properties
+        .map(property =>
+                 this.getElementAnimation(elementIndex, property, animationReason))
+    const durations = animations.map(animation => animation.duration)
+
+    const delays = animations
+        .map((animation: ElementAnimation): number => {
+          if (animation.duration <= 0) {
+            return 0
+          }
+
+          return this.getAnimationDelay(elementIndex, animation)
+        })
+
+    this.configureElementTransitionDurations(element, durations)
+    this.configureElementTransitionDelays(element, delays)
+
+    return Math.max(...delays) + Math.max(...durations)
+  }
+
+  private getElementAnimation(elementIndex: number,
+                              property: string,
+                              reason: CollectionViewAnimationReason): ElementAnimation {
+
+    // if the delegate does not implement the animation duration method:
+    // use the constant, and no need for getting layout's element info
+    if (!this.delegate.getAnimationDuration) {
+      return new ElementAnimation(this.animationDuration, property, reason,undefined)
+    }
+
+    const elementInfo = this.layout.getElementInfo(elementIndex)
+    const animationDuration =
+        Math.max(0,
+                 this.delegate.getAnimationDuration(elementIndex, elementInfo, property, reason))
+    return new ElementAnimation(animationDuration, property, reason, elementInfo)
+  }
+
+  private getAnimationDelay(elementIndex: number, animation: ElementAnimation): number {
+
+    // if the delegate does not implement the animation delay method, use none
+    if (!this.delegate.getAnimationDelay) {
+      return 0
+    }
+
+    return Math.max(0,
+                    this.delegate.getAnimationDelay(elementIndex,
+                                                    animation.elementInfo,
+                                                    animation.property,
+                                                    animation.reason))
   }
 
   private getImprovedPositions(currentPosition: Position,
@@ -487,20 +603,22 @@ export default class CollectionView {
     }
     this._resizing = true
 
-    this.updateLayout(this._layout)
-      .then(() => {
-        this._resizing = false
+    const completion = () => {
+      this._resizing = false
 
-        if (this._wantsResize) {
-          this._wantsResize = false
-          this.resize()
-        }
-      })
+      if (this._wantsResize) {
+        this._wantsResize = false
+        this.resize()
+      }
+    }
+
+    this.updateLayout(this._layout)
+      .then(completion, completion)
   }
 
   public updateLayout(newLayout: CollectionViewLayout, animated: boolean = true): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const operation = this.startOperation()
+      const operation = this.startOperation(reject)
 
       this._container.removeEventListener('scroll', this.onScroll, false)
 
@@ -516,8 +634,14 @@ export default class CollectionView {
       const finalContentSize = newLayout.getContentSize(this._count, newContainerSize)
 
       const finalPosition = new Position(
-        newPosition.x - Math.abs(Math.min(0, finalContentSize.width - (newPosition.x + newContainerSize.width))),
-        newPosition.y - Math.abs(Math.min(0, finalContentSize.height - (newPosition.y + newContainerSize.height)))
+        Math.max(0,
+                 newPosition.x - Math.abs(Math.min(0,
+                                                   finalContentSize.width
+                                                       - (newPosition.x + newContainerSize.width)))),
+        Math.max(0,
+                 newPosition.y - Math.abs(Math.min(0,
+                                                   finalContentSize.height
+                                                       - (newPosition.y + newContainerSize.height))))
       )
 
       const finalIndices = this.getIndices(newLayout, finalPosition, newContainerSize)
@@ -533,6 +657,22 @@ export default class CollectionView {
 
       // temporarily shift position of visible elements and scroll
       // to future position, so elements appear to "stay"
+      //
+      // for example, when transitioning from a vertical grid layout
+      // to a horizontal grid layout:
+      //
+      // ┌───┬───────┏━━━┓───┐
+      // │   │       ┃   ┃   │
+      // ├───┼───────┗━━━┛───┘
+      // │   │         ▲
+      // │   │         │
+      // │   │
+      // ┏━━━┓         │
+      // ┃   ┃─ ─ ─ ─ ─
+      // ┗━━━┛
+      // │   │
+      // │   │
+      // └───┘
 
       const diffX = Math.round(newPosition.x - this._scrollPosition.x)
       const diffY = Math.round(newPosition.y - this._scrollPosition.y)
@@ -552,9 +692,24 @@ export default class CollectionView {
       this.updateContainerSize(newLayout)
 
       // reposition (NOTE: delay important)
-      this.delayForOperation(operation, reject, () => {
+      this.delayForOperation(operation, () => {
 
-        this.repositionVisibleElements(newLayout, false)
+        this.repositionVisibleElements(newLayout,
+                                       false,
+                                       operation,
+                                       animated
+                                           ? CollectionViewAnimationReason.LAYOUT_UPDATE
+                                           : undefined)
+            .then(() => {
+              this.updateCurrentIndices()
+
+              if (this._installed) {
+                this._container.addEventListener('scroll', this.onScroll, false)
+              }
+
+              resolve()
+            })
+            .catch(reject)
 
         this._elements.forEach((element, index) => {
           assert(() => index >= 0)
@@ -563,16 +718,6 @@ export default class CollectionView {
 
         this._layout = newLayout
 
-        this.delayForOperation(operation, reject, () => {
-
-          this.updateCurrentIndices()
-
-          if (this._installed) {
-            this._container.addEventListener('scroll', this.onScroll, false)
-          }
-
-          resolve()
-        }, animated ? this.animationDuration : 0)
       }, 0)
     })
   }
@@ -601,7 +746,7 @@ export default class CollectionView {
     }
   }
 
-  private removeFromParent(element: HTMLElement) {
+  private removeFromParent(element: HTMLElement): void {
     const parent = element.parentElement
     if (!parent) {
       return
@@ -616,7 +761,7 @@ export default class CollectionView {
                        animated: boolean = true): Promise<void> {
 
     return new Promise<void>((resolve, reject) => {
-      const operation = this.startOperation()
+      const operation = this.startOperation(reject)
 
       const promises: Promise<void>[] = []
 
@@ -677,18 +822,24 @@ export default class CollectionView {
                          ? Math.max(0, scrollY - (bottom - newContentHeight))
                          : scrollY)
 
-        this.scrollTo(this._scrollPosition, true)
+        // TODO: how to handle variable duration here?
+        this.scrollTo(this._scrollPosition, animated)
       }
 
       // disappear and remove elements
 
-      removedIndices.forEach(index => {
-        assert(() => index >= 0)
+      removedIndices.forEach(elementIndex => {
+        assert(() => elementIndex >= 0)
 
-        const element = this._elements.get(index)
+        const element = this._elements.get(elementIndex)
         if (!element) {
           return
         }
+
+        // TODO: include transform?
+        const maxTransitionDuration =
+            this.performTransition(elementIndex, element, false,
+                                   CollectionViewAnimationReason.ELEMENT_ADDITION)
 
         element.classList.add(this.disappearingClassName)
         element.style.zIndex = '0'
@@ -701,15 +852,17 @@ export default class CollectionView {
           setTimeout(() => {
                        this.removeFromParent(element)
                        if (this.delegate.invalidateElement) {
-                         this.delegate.invalidateElement(element, index)
+                         this.delegate.invalidateElement(element, elementIndex)
                        }
+
+                       // TODO: reset transition properties/durations/delays after animation completed?
 
                        resolve()
                      },
-                     this.animationDuration)
+                     maxTransitionDuration)
         }))
 
-        this._elements.delete(index)
+        this._elements.delete(elementIndex)
         this._positions.delete(element)
       })
 
@@ -789,15 +942,24 @@ export default class CollectionView {
 
         const element = this.createAndAddElement()
         const isNew = addedIndices.indexOf(index) >= 0
+        const layoutIndex = isNew ? index : oldIndex
         this.configureElement(this._layout, element, index)
-        this.getAndApplyElementPosition(this._layout, element, isNew ? index : oldIndex)
+        this.getAndApplyElementPosition(this._layout, element, layoutIndex)
 
         if (isNew) {
+
+          // TODO: include transform?
+          this.performTransition(layoutIndex, element, false,
+                                 CollectionViewAnimationReason.ELEMENT_ADDITION)
+
           element.classList.add(this.appearingClassName)
           // TODO: trigger restyle in a more proper way
           // tslint:disable-next-line:no-unused-expression
           window.getComputedStyle(element).opacity
           element.classList.remove(this.appearingClassName)
+
+          // TODO: reset transition properties/durations/delays after animation completed?
+
         } else {
           // NOTE: important, forces a relayout
           element.getBoundingClientRect()
@@ -812,24 +974,28 @@ export default class CollectionView {
       promises.push(new Promise<void>((resolve, reject) => {
 
         // NOTE: delay important
-        this.delayForOperation(operation, reject, () => {
+        this.delayForOperation(operation, () => {
 
-          this.repositionVisibleElements(this._layout, true)
+          this.repositionVisibleElements(this._layout,
+                                         true,
+                                         operation,
+                                         animated
+                                             ? CollectionViewAnimationReason.ELEMENT_MOVE
+                                             : undefined)
+              .then(() => {
+                if (countDifference < 0) {
+                  this.updateContentSize(this._layout)
+                }
+
+                this.updateCurrentIndices()
+
+                resolve()
+              })
+              .catch(reject)
 
           if (this._installed) {
             this._container.addEventListener('scroll', this.onScroll, false)
           }
-
-          this.delayForOperation(operation, reject, () => {
-
-            if (countDifference < 0) {
-              this.updateContentSize(this._layout)
-            }
-
-            this.updateCurrentIndices()
-
-            resolve()
-          }, animated ? this.animationDuration : 0)
 
         }, 0)
       }))
@@ -839,30 +1005,46 @@ export default class CollectionView {
     })
   }
 
-  private startOperation(): Operation {
-    const operation = new Operation()
+  private startOperation(reject: (reason?: any) => void): Operation {
+    const operation = new Operation(reject)
     this._currentOperation = operation
     return operation
   }
 
-  private checkCurrentOperation(operation: Operation, reject: () => void): boolean {
-    if (this._currentOperation === operation) {
-      return true
+  private checkCurrentOperation(operation: Operation): boolean {
+    if (this._currentOperation !== operation) {
+      operation.reject()
+      return false
     }
 
-    reject()
-    return false
+    return true
   }
 
   private delayForOperation(operation: Operation,
-                            reject: () => void,
-                            func: () => void, duration: number): void {
+                            func: () => void,
+                            duration: number): void {
     setTimeout(() => {
-      if (!this.checkCurrentOperation(operation, reject)) {
+      if (!this.checkCurrentOperation(operation)) {
         return
       }
 
       func()
     }, duration)
+  }
+
+  // configures the element's transition properties and returns them
+  private configureElementTransitionProperties(element: HTMLElement, includeTransform: boolean): string[] {
+    const properties = CollectionView.NORMAL_TRANSITION_PROPERTIES
+        .concat(includeTransform ? ['transform'] : [])
+    element.style.transitionProperty = properties.join(',')
+    return properties
+  }
+
+  private configureElementTransitionDurations(element: HTMLElement, durations: number[]) {
+    element.style.transitionDuration = durations.map(duration => duration + 'ms').join(',')
+  }
+
+  private configureElementTransitionDelays(element: HTMLElement, delays: number[]) {
+    element.style.transitionDelay = delays.map(delay => delay + 'ms').join(',')
   }
 }
