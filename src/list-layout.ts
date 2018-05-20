@@ -2,7 +2,12 @@ import CollectionViewLayout from './layout'
 import { Position, Size, Ranges } from './types'
 import { range } from './utils'
 
+export class ListLayoutElementInfo {
+  constructor(readonly row: number) {}
+}
+
 export default class ListLayout implements CollectionViewLayout {
+
   readonly rowHeight: number
 
   static readonly DEFAULT_ROW_HEIGHT: number = 200
@@ -45,5 +50,9 @@ export default class ListLayout implements CollectionViewLayout {
     const oldRowOffset = y % oldListLayout.rowHeight
     const newY = oldRowIndex * this.rowHeight + oldRowOffset
     return new Position(x, newY)
+  }
+
+  getElementInfo(index: number): ListLayoutElementInfo {
+    return new ListLayoutElementInfo(index)
   }
 }

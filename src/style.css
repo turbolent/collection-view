@@ -12,13 +12,7 @@
 .element {
     display: block;
     position: absolute;
-    opacity: 1;
-    transition-duration: 400ms;
-    transition-property: width, height, opacity;
-}
-
-:global(.repositioning) {
-    transition-property: width, height, opacity, transform;
+    opacity: 1
 }
 
 :global(.appearing),

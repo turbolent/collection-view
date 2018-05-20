@@ -9,6 +9,12 @@ export interface GridLayoutParameters {
   readonly itemSize?: Size
 }
 
+export class GridLayoutElementInfo {
+
+  constructor(readonly row: number,
+              readonly column: number) {}
+}
+
 export default class GridLayout implements CollectionViewLayout {
 
   static readonly DEFAULT_DIRECTION: Direction = Direction.VERTICAL
@@ -70,8 +76,8 @@ export default class GridLayout implements CollectionViewLayout {
   }
 
   getElementPosition(index: number): Position {
-    const sectionIndex = Math.floor(index / this._otherItemCount)
-    const itemIndex = index % this._otherItemCount
+    const rowIndex = Math.floor(index / this._otherItemCount)
+    const columnIndex = index % this._otherItemCount
     const otherDirection = this._otherDirection
     const spacing = this.spacing.get(this.direction)
     const otherSpacing = this.spacing.get(otherDirection)
@@ -87,20 +93,20 @@ export default class GridLayout implements CollectionViewLayout {
 
     return Position.in(
       this.direction,
-      startInset + sectionIndex * itemSizeAndSpacing,
-      otherStartInset + itemIndex * otherItemSizeAndSpacing + Math.max(0, diff / 2),
+      startInset + rowIndex * itemSizeAndSpacing,
+      otherStartInset + columnIndex * otherItemSizeAndSpacing + Math.max(0, diff / 2),
     )
   }
 
   getContentSize(count: number, containerSize: Size): Size {
     const otherItemCount = this.getOtherItemCount(containerSize)
     const otherSize = containerSize.get(this._otherDirection)
-    const sectionCount = Math.ceil(count / otherItemCount)
+    const rowCount = Math.ceil(count / otherItemCount)
     const startInset = this.insets.getStart(this.direction)
     const endInset = this.insets.getEnd(this.direction)
     const spacing = this.spacing.get(this.direction)
     const itemSizeAndSpacing = this.itemSize.get(this.direction) + spacing
-    const size = startInset + sectionCount * itemSizeAndSpacing + endInset
+    const size = startInset + rowCount * itemSizeAndSpacing + endInset
     return Size.in(
       this.direction,
       size,
@@ -119,21 +125,27 @@ export default class GridLayout implements CollectionViewLayout {
     const oldPosition = position.get(oldDirection)
     const oldSpacing = oldGridLayout.spacing.get(oldDirection)
     const oldItemSizeAndSpacing = oldGridLayout.itemSize.get(oldDirection) + oldSpacing
-    const oldSectionIndex = Math.floor(oldPosition / oldItemSizeAndSpacing)
-    const oldItemIndex = oldSectionIndex * oldGridLayout._otherItemCount
+    const oldRowIndex = Math.floor(oldPosition / oldItemSizeAndSpacing)
+    const oldColumnIndex = oldRowIndex * oldGridLayout._otherItemCount
     const oldItemOffset = oldPosition % oldItemSizeAndSpacing
 
     const newItemCount = this.getOtherItemCount(newContainerSize)
-    const newSectionIndex = Math.floor(oldItemIndex / newItemCount)
+    const newRowIndex = Math.floor(oldColumnIndex / newItemCount)
     const newDirection = this.direction
     const newSpacing = this.spacing.get(newDirection)
     const newItemSizeAndSpacing = this.itemSize.get(newDirection) + newSpacing
-    const newPosition = newSectionIndex * newItemSizeAndSpacing + oldItemOffset
+    const newPosition = newRowIndex * newItemSizeAndSpacing + oldItemOffset
 
     return Position.in(
       this.direction,
       newPosition,
       0
     )
+  }
+
+  getElementInfo(index: number): GridLayoutElementInfo {
+      const rowIndex = Math.floor(index / this._otherItemCount)
+      const columnIndex = index % this._otherItemCount
+      return new GridLayoutElementInfo(rowIndex, columnIndex)
   }
 }

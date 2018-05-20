@@ -18,4 +18,7 @@ export default interface CollectionViewLayout {
 
   updateContainerSize?(containerSize: Size): void
 
+  // NOTE: the return type is not a generic type parameter, as the collection view
+  // can not have a type parameter constraining it to a single layout
+  getElementInfo(index: number): any
 }
