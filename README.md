@@ -26,7 +26,7 @@ class Delegate {
   getCount() {
     return this.items.length
   }
-  
+
   configureElement(element, index) {
     element.textContent = this.items[index]
   }
@@ -70,6 +70,33 @@ The delegate object is responsible for defining how many items the collection vi
 
   Similar to [`UIScrollViewDelegate.scrollViewDidScroll(_:)`](https://developer.apple.com/documentation/uikit/uiscrollviewdelegate/1619392-scrollviewdidscroll)
 
+- **getAnimationDuration(index: _number_, info, property: _string_, reason: _CollectionViewAnimationReason_): _number_** (optional)
+
+  Return the animation duration for the given property for element at the given index.
+
+  See below for the `info` and `reason` parameters.
+
+- **getAnimationDelay(index: _number_, info, property: _string_, reason: _CollectionViewAnimationReason_): _number_** (optional)
+
+  Return the animation duration for the given property for element at the given index.
+
+  See below for the `info` and `reason` parameters.
+
+
+The `getAnimationDuration` and `getAnimationDelay` delegate methods are passed an `info` and `reason` parameter:
+
+- **info**:
+
+  Layout information for the element. When a list layout is used, it is an object with a `row` property, and when a grid layout layout is used, it is an object containing `row` and `column` properties.
+
+- **reason: _CollectionViewAnimationReason_**:
+
+  - `ELEMENT_ADDITION`: The element is being added
+  - `ELEMENT_REMOVAL`: The element is being removed
+  - `ELEMENT_MOVE`: The element is being repositioned
+  - `LAYOUT_UPDATE`: The layout is updated. This is also the case when the collection view is being resized.
+
+
 
 ## Changing the data
 
@@ -87,7 +114,7 @@ The collection view supports transitions between different collections. As it is
 
 * **moved: _Map.<number, number>_**
 
-  Indices which were moved. The keys are indices referring to the collection before the changes, and the values are indices referring to the collection after the changes. 
+  Indices which were moved. The keys are indices referring to the collection before the changes, and the values are indices referring to the collection after the changes.
 
   May also be passed as an _Object.<string, number>_
 
@@ -124,10 +151,10 @@ It is similar to [`UICollectionViewFlowLayout`](https://developer.apple.com/libr
 
 * **direction: _Direction_**
 
-  The direction in which the collection view scrolls. 
-  
-  If `Direction.VERTICAL`, the collection view scrolls vertically and items flow in rows from left to right. 
-  
+  The direction in which the collection view scrolls.
+
+  If `Direction.VERTICAL`, the collection view scrolls vertically and items flow in rows from left to right.
+
   If `Direction.HORIZONTAL`, the collection view scrolls horizontally and items flow in columns from top to bottom.
 
   Default: `Direction.VERTICAL`
@@ -243,7 +270,7 @@ The layout object is responsible for defining the size of the collection view co
 
   Specifies the additional values by which the region is extended that is used to determine the visible elements. Increasing the values leads to more elements staying attached to the scroll element. This improves appearance, as elements are already properly positioned and configured when they are becoming visible to the user. However, it is also likely to reduce scroll performance, as more elements need to be rendered by the browser.
 
-  Keys: `left`, `top`, `right`, and `bottom`. 
+  Keys: `left`, `top`, `right`, and `bottom`.
 
   Default: all values are `CollectionView.DEFAULT_THRESHOLD` = `3000`
 
@@ -252,12 +279,6 @@ The layout object is responsible for defining the size of the collection view co
   Specifies how long animations take. Also needs to be set as the `transition-duration` style property of the elements.
 
   Default: `CollectionView.DEFAULT_ANIMATION_DURATION` = `400`
-
-* **repositioningClassName: _string_**
-
-  Class name which is applied to elements while they are being repositioned.
-
-  Default: `CollectionView.DEFAULT_REPOSITIONING_CLASS_NAME`
 
 * **appearingClassName: _string_**
 
