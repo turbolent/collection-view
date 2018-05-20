@@ -39,7 +39,9 @@ export enum CollectionViewAnimationReason {
 
 class InvalidArgumentError extends Error {}
 
-class Operation {}
+class Operation {
+  constructor(readonly reject: (reason?: any) => void) {}
+}
 
 class ElementAnimation {
   constructor(readonly duration: number,
@@ -599,7 +601,7 @@ export default class CollectionView {
 
   public updateLayout(newLayout: CollectionViewLayout, animated: boolean = true): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const operation = this.startOperation()
+      const operation = this.startOperation(reject)
 
       this._container.removeEventListener('scroll', this.onScroll, false)
 
@@ -673,7 +675,7 @@ export default class CollectionView {
       this.updateContainerSize(newLayout)
 
       // reposition (NOTE: delay important)
-      this.delayForOperation(operation, reject, () => {
+      this.delayForOperation(operation, () => {
 
         const maxAnimationDuration =
             this.repositionVisibleElements(newLayout, false,
@@ -688,7 +690,7 @@ export default class CollectionView {
 
         this._layout = newLayout
 
-        this.delayForOperation(operation, reject, () => {
+        this.delayForOperation(operation, () => {
 
           this.updateCurrentIndices()
 
@@ -741,7 +743,7 @@ export default class CollectionView {
                        animated: boolean = true): Promise<void> {
 
     return new Promise<void>((resolve, reject) => {
-      const operation = this.startOperation()
+      const operation = this.startOperation(reject)
 
       const promises: Promise<void>[] = []
 
@@ -956,7 +958,7 @@ export default class CollectionView {
       promises.push(new Promise<void>((resolve, reject) => {
 
         // NOTE: delay important
-        this.delayForOperation(operation, reject, () => {
+        this.delayForOperation(operation, () => {
 
           const maxAnimationDuration =
               this.repositionVisibleElements(this._layout, true,
@@ -968,7 +970,7 @@ export default class CollectionView {
             this._container.addEventListener('scroll', this.onScroll, false)
           }
 
-          this.delayForOperation(operation, reject, () => {
+          this.delayForOperation(operation, () => {
 
             if (countDifference < 0) {
               this.updateContentSize(this._layout)
@@ -988,26 +990,26 @@ export default class CollectionView {
     })
   }
 
-  private startOperation(): Operation {
-    const operation = new Operation()
+  private startOperation(reject: (reason?: any) => void): Operation {
+    const operation = new Operation(reject)
     this._currentOperation = operation
     return operation
   }
 
-  private checkCurrentOperation(operation: Operation, reject: () => void): boolean {
-    if (this._currentOperation === operation) {
-      return true
+  private checkCurrentOperation(operation: Operation): boolean {
+    if (this._currentOperation !== operation) {
+      operation.reject()
+      return false
     }
 
-    reject()
-    return false
+    return true
   }
 
   private delayForOperation(operation: Operation,
-                            reject: () => void,
-                            func: () => void, duration: number): void {
+                            func: () => void,
+                            duration: number): void {
     setTimeout(() => {
-      if (!this.checkCurrentOperation(operation, reject)) {
+      if (!this.checkCurrentOperation(operation)) {
         return
       }
 
