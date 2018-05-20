@@ -55,7 +55,7 @@ export default class CollectionView {
   static readonly DEFAULT_REPOSITIONING_CLASS_NAME: string = 'repositioning'
   static readonly DEFAULT_APPEARING_CLASS_NAME: string= 'appearing'
   static readonly DEFAULT_DISAPPEARING_CLASS_NAME: string = 'disappearing'
-  static readonly DEFAULT_ANIMATION_DURATION: number = 2000
+  static readonly DEFAULT_ANIMATION_DURATION: number = 400
   static readonly DEFAULT_RESIZE_THROTTLE: number = 1000
   static readonly DEFAULT_POSITION_IMPROVEMENT_OFFSET: number = 100
 
@@ -346,7 +346,7 @@ export default class CollectionView {
   }
 
   // TODO: assumes sizes are constant
-  // TODO: needs to return max animation duration
+  // TODO: use operation, return promise
   private repositionVisibleElements(layout: CollectionViewLayout,
                                     improvePositions: boolean,
                                     animationReason?: CollectionViewAnimationReason): number {
