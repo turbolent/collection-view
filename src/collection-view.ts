@@ -55,7 +55,7 @@ export default class CollectionView {
   static readonly DEFAULT_REPOSITIONING_CLASS_NAME: string = 'repositioning'
   static readonly DEFAULT_APPEARING_CLASS_NAME: string= 'appearing'
   static readonly DEFAULT_DISAPPEARING_CLASS_NAME: string = 'disappearing'
-  static readonly DEFAULT_ANIMATION_DURATION: number = 400
+  static readonly DEFAULT_ANIMATION_DURATION: number = 2000
   static readonly DEFAULT_RESIZE_THROTTLE: number = 1000
   static readonly DEFAULT_POSITION_IMPROVEMENT_OFFSET: number = 100
 
@@ -123,6 +123,7 @@ export default class CollectionView {
 
     this.animationDuration = coalesce(parameters.animationDuration,
                                       CollectionView.DEFAULT_ANIMATION_DURATION)
+
     this.repositioningClassName = coalesce(parameters.repositioningClassName,
                                            CollectionView.DEFAULT_REPOSITIONING_CLASS_NAME)
     this.appearingClassName = coalesce(parameters.appearingClassName,
@@ -628,6 +629,22 @@ export default class CollectionView {
 
       // temporarily shift position of visible elements and scroll
       // to future position, so elements appear to "stay"
+      //
+      // for example, when transitioning from a vertical grid layout
+      // to a horizontal grid layout:
+      //
+      // ┌───┬───────┏━━━┓───┐
+      // │   │       ┃   ┃   │
+      // ├───┼───────┗━━━┛───┘
+      // │   │         ▲
+      // │   │         │
+      // │   │
+      // ┏━━━┓         │
+      // ┃   ┃─ ─ ─ ─ ─
+      // ┗━━━┛
+      // │   │
+      // │   │
+      // └───┘
 
       const diffX = Math.round(newPosition.x - this._scrollPosition.x)
       const diffY = Math.round(newPosition.y - this._scrollPosition.y)
