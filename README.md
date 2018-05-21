@@ -70,6 +70,19 @@ The delegate object is responsible for defining how many items the collection vi
 
   Similar to [`UIScrollViewDelegate.scrollViewDidScroll(_:)`](https://developer.apple.com/documentation/uikit/uiscrollviewdelegate/1619392-scrollviewdidscroll)
 
+- **getStyle(index: _number_, phase: _CollectionViewAnimationPhase_, info, position: _Position_): _Style_** (optional)
+
+  Called to determine the style of the element at the given index for the given animation phase and position.
+  The returned style is an object with hyphen-style CSS properties and string values, e.g. `{"background-color": "red"}`.
+
+  See below for the `info` parameter.
+
+  - **phase: _CollectionViewAnimationPhase_**
+
+    - `ELEMENT_APPEARING`: The element is about to appear ("is entering")
+    - `ELEMENT_APPEARED`: The element has appeared
+    - `ELEMENT_DISAPPEARED`: The element has disappeared ("has left")
+
 - **getAnimationDuration(index: _number_, info, property: _string_, reason: _CollectionViewAnimationReason_): _number_** (optional)
 
   Return the animation duration for the given property for element at the given index.
@@ -83,19 +96,17 @@ The delegate object is responsible for defining how many items the collection vi
   See below for the `info` and `reason` parameters.
 
 
-The `getAnimationDuration` and `getAnimationDelay` delegate methods are passed an `info` and `reason` parameter:
+The `getAnimationDuration` and `getAnimationDelay` delegate methods are passed a `reason` parameter, which indicates why the element is animated.
 
-- **info**:
-
-  Layout information for the element. When a list layout is used, it is an object with a `row` property, and when a grid layout layout is used, it is an object containing `row` and `column` properties.
-
-- **reason: _CollectionViewAnimationReason_**:
+- **reason: _CollectionViewAnimationReason_**
 
   - `ELEMENT_ADDITION`: The element is being added
   - `ELEMENT_REMOVAL`: The element is being removed
   - `ELEMENT_MOVE`: The element is being repositioned
   - `LAYOUT_UPDATE`: The layout is updated. This is also the case when the collection view is being resized.
 
+The `getStyle`, `getAnimationDuration`, and `getAnimationDelay` delegate methods are also passed an `info` parameter, which is layout information for the element, provided by the current layout.
+When a list layout is used, it is an object with a `row` property, and when a grid layout layout is used, it is an object containing `row` and `column` properties.
 
 
 ## Changing the data
@@ -276,21 +287,10 @@ The layout object is responsible for defining the size of the collection view co
 
 * **animationDuration: _number_**
 
-  Specifies how long animations take. Also needs to be set as the `transition-duration` style property of the elements.
+  Specifies how long animations take by default. Animations durations for each element can also be provided through the delegate method `getAnimationDuration`.
 
   Default: `CollectionView.DEFAULT_ANIMATION_DURATION` = `400`
 
-* **appearingClassName: _string_**
-
-  Class name which is applied to elements while they are appearing.
-
-  Default: `CollectionView.DEFAULT_APPEARING_CLASS_NAME`
-
-* **disappearingClassName: _string_**
-
-  Class name which is applied to elements while they are disappearing.
-
-  Default: `CollectionView.DEFAULT_DISAPPEARING_CLASS_NAME`
 
 ## Examples
 
