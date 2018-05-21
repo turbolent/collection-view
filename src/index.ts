@@ -1,6 +1,8 @@
 import CollectionView, {
+  CollectionViewAnimationReason,
   CollectionViewParameters,
-  CollectionViewThresholds
+  CollectionViewThresholds,
+  CollectionViewAnimationPhase
 } from './collection-view'
 import GridLayout, { GridLayoutParameters } from './grid-layout'
 import CollectionViewLayout from './layout'
@@ -14,6 +16,8 @@ export {
   CollectionViewDelegate,
   CollectionViewParameters,
   CollectionViewThresholds,
+  CollectionViewAnimationReason,
+  CollectionViewAnimationPhase,
   GridLayout,
   GridLayoutParameters,
   ListLayout,
