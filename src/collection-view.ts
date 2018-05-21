@@ -186,7 +186,7 @@ export default class CollectionView {
 
     if (elementHandler) {
       this._elements.forEach(element =>
-                                 elementHandler(element))
+                               elementHandler(element))
     }
 
     this._elements.forEach(element => this.removeFromParent(element))
@@ -213,9 +213,6 @@ export default class CollectionView {
     const containerSize = this.currentContainerSize
     this._contentSize = layout.getContentSize(this._count, containerSize)
     const {width, height} = this._contentSize
-
-    console.log('updateContentSize', width, height)
-
     this.content.style.minWidth = `${width}px`
     this.content.style.minHeight = `${height}px`
   }
@@ -301,18 +298,18 @@ export default class CollectionView {
     // add missing elements
     const currentIndices = this._visibleIndices
     newIndices.filter(index => currentIndices.indexOf(index) < 0)
-        .forEach(index => {
-          // reuse one of the invalid/old elements, or create a new element
-          const element = invalidElements.pop()
-                          || this.createAndAddElement()
-          this.configureElement(this._layout, element, index)
-          this.getAndApplyElementPosition(this._layout, element, index)
+      .forEach(index => {
+        // reuse one of the invalid/old elements, or create a new element
+        const element = invalidElements.pop()
+                        || this.createAndAddElement()
+        this.configureElement(this._layout, element, index)
+        this.getAndApplyElementPosition(this._layout, element, index)
 
-          // TODO: this.configureElementTransitionProperties(element) ?
+        // TODO: this.configureElementTransitionProperties(element) ?
 
-          assert(() => index >= 0)
-          this._elements.set(index, element)
-        })
+        assert(() => index >= 0)
+        this._elements.set(index, element)
+      })
     this._visibleIndices = newIndices
 
     // actually remove old elements, which weren't reused
@@ -501,7 +498,7 @@ export default class CollectionView {
 
   private getImprovedPositions(currentPosition: Position,
                                newPosition: Position,
-                               size: Size): [ Position | undefined, Position | undefined ] | undefined {
+                               size: Size): [Position | undefined, Position | undefined] | undefined {
 
     const {width, height} = size
 
@@ -530,53 +527,53 @@ export default class CollectionView {
     // check bottom
 
     const adjustedBottomLine =
-        new Line(new Position(minX, maxY + offset),
-                 new Position(maxX, maxY + offset))
+      new Line(new Position(minX, maxY + offset),
+               new Position(maxX, maxY + offset))
 
     const bottomIntersectionPoint = intersect(transitionLine, adjustedBottomLine)
     if (bottomIntersectionPoint) {
       return movingIn
-          ? [ bottomIntersectionPoint, undefined ]
-          : [ undefined, bottomIntersectionPoint ]
+        ? [bottomIntersectionPoint, undefined]
+        : [undefined, bottomIntersectionPoint]
     }
 
     // check top
 
     const adjustedTopLine =
-        new Line(new Position(minX, minY - height - offset),
-                 new Position(maxX, minY - height - offset))
+      new Line(new Position(minX, minY - height - offset),
+               new Position(maxX, minY - height - offset))
 
     const topIntersectionPoint = intersect(transitionLine, adjustedTopLine)
     if (topIntersectionPoint) {
       return movingIn
-          ? [ topIntersectionPoint, undefined ]
-          : [ undefined, topIntersectionPoint ]
+        ? [topIntersectionPoint, undefined]
+        : [undefined, topIntersectionPoint]
     }
 
     // check left
 
     const adjustedLeftLine =
-        new Line(new Position(minX - width - offset, minY),
-                 new Position(minX - width - offset, maxY))
+      new Line(new Position(minX - width - offset, minY),
+               new Position(minX - width - offset, maxY))
 
     const leftIntersectionPoint = intersect(transitionLine, adjustedLeftLine)
     if (leftIntersectionPoint) {
       return movingIn
-          ? [ leftIntersectionPoint, undefined ]
-          : [ undefined, leftIntersectionPoint ]
+        ? [leftIntersectionPoint, undefined]
+        : [undefined, leftIntersectionPoint]
     }
 
     // check right
 
     const adjustedRightLine =
-        new Line(new Position(maxX + offset, minY),
-                 new Position(maxX + offset, maxY))
+      new Line(new Position(maxX + offset, minY),
+               new Position(maxX + offset, maxY))
 
     const rightIntersectionPoint = intersect(transitionLine, adjustedRightLine)
     if (rightIntersectionPoint) {
       return movingIn
-          ? [ rightIntersectionPoint, undefined ]
-          : [ undefined, rightIntersectionPoint ]
+        ? [rightIntersectionPoint, undefined]
+        : [undefined, rightIntersectionPoint]
     }
 
     return
