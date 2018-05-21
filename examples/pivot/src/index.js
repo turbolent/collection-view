@@ -1,5 +1,5 @@
 
-import { CollectionView, GridLayout, CollectionViewAnimationPhase } from '../../../dist'
+import { CollectionView, GridLayout, CollectionViewAnimationPhase, CollectionViewAnimationReason, Animation } from '../../../dist'
 import style from '../../_common/style.css'
 
 
@@ -18,12 +18,24 @@ class Delegate {
     element.textContent = this.items[index]
   }
 
-  getAnimationDuration() {
-    return 300
-  }
-
-  getAnimationDelay(index, info) {
-    return Math.random() * 100
+  getAnimation(index, info, property, reason) {
+    const extra = 200
+    const extraDuration = Math.random() * extra
+    const duration = 300 + extraDuration
+    const delay = extra - extraDuration
+    let timingFunction
+    switch (reason) {
+        case CollectionViewAnimationReason.ELEMENT_ADDITION:
+            timingFunction = 'cubic-bezier(0.0, 0.0, 0.2, 1)'
+            break
+        case CollectionViewAnimationReason.ELEMENT_REMOVAL:
+            timingFunction = 'cubic-bezier(0.4, 0.0, 1, 1)'
+            break
+        case CollectionViewAnimationReason.ELEMENT_MOVE:
+        case CollectionViewAnimationReason.LAYOUT_UPDATE:
+            timingFunction = 'cubic-bezier(0.4, 0.0, 0.2, 1)'
+    }
+    return new Animation(duration, delay, timingFunction)
   }
 
   getStyle(index, phase, info, position) {

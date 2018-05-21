@@ -83,29 +83,28 @@ The delegate object is responsible for defining how many items the collection vi
     - `ELEMENT_APPEARED`: The element has appeared
     - `ELEMENT_DISAPPEARED`: The element has disappeared ("has left")
 
-- **getAnimationDuration(index: _number_, info, property: _string_, reason: _CollectionViewAnimationReason_): _number_** (optional)
+- **getAnimation(index: _number_, info, property: _string_, reason: _CollectionViewAnimationReason_): _Animation_** (optional)
 
-  Return the animation duration for the given property for element at the given index.
+  Return the animation for the given property of the element at the given index.
 
-  See below for the `info` and `reason` parameters.
+  - **_Animation_**
 
-- **getAnimationDelay(index: _number_, info, property: _string_, reason: _CollectionViewAnimationReason_): _number_** (optional)
+    - **duration: _number_** (optional): The duration of the CSS transition
+    - **delay: _number_** (optional): The delay of the CSS transition
+    - **timingFunction: _string_** (optional): The timing function of the CSS transition
 
-  Return the animation duration for the given property for element at the given index.
+  See below for the `info` parameter.
 
-  See below for the `info` and `reason` parameters.
+  - **reason: _CollectionViewAnimationReason_**
 
+    Indicates why the element is animated.
 
-The `getAnimationDuration` and `getAnimationDelay` delegate methods are passed a `reason` parameter, which indicates why the element is animated.
+    - `ELEMENT_ADDITION`: The element is being added
+    - `ELEMENT_REMOVAL`: The element is being removed
+    - `ELEMENT_MOVE`: The element is being repositioned
+    - `LAYOUT_UPDATE`: The layout is updated. This is also the case when the collection view is being resized.
 
-- **reason: _CollectionViewAnimationReason_**
-
-  - `ELEMENT_ADDITION`: The element is being added
-  - `ELEMENT_REMOVAL`: The element is being removed
-  - `ELEMENT_MOVE`: The element is being repositioned
-  - `LAYOUT_UPDATE`: The layout is updated. This is also the case when the collection view is being resized.
-
-The `getStyle`, `getAnimationDuration`, and `getAnimationDelay` delegate methods are also passed an `info` parameter, which is layout information for the element, provided by the current layout.
+The `getStyle` and `getAnimation` delegate methods are also passed an `info` parameter, which is layout information for the element, provided by the current layout.
 When a list layout is used, it is an object with a `row` property, and when a grid layout layout is used, it is an object containing `row` and `column` properties.
 
 
@@ -287,7 +286,7 @@ The layout object is responsible for defining the size of the collection view co
 
 * **animationDuration: _number_**
 
-  Specifies how long animations take by default. Animations durations for each element can also be provided through the delegate method `getAnimationDuration`.
+  Specifies how long animations take by default. Animations durations for each element can also be provided through the delegate method `getAnimation`.
 
   Default: `CollectionView.DEFAULT_ANIMATION_DURATION` = `400`
 

@@ -1,5 +1,5 @@
 
-import { CollectionView, GridLayout } from '../../../dist'
+import { CollectionView, GridLayout, Animation } from '../../../dist'
 import style from '../../_common/style.css'
 
 
@@ -18,12 +18,8 @@ class Delegate {
     element.textContent = this.items[index]
   }
 
-  getAnimationDuration() {
-    return 200
-  }
-
-  getAnimationDelay(index, info) {
-    return (info.row + info.column) * 70
+  getAnimation(index, info) {
+    return new Animation(200, (info.row + info.column) * 70)
   }
 }
 
