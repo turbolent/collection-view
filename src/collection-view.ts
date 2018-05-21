@@ -74,7 +74,7 @@ export default class CollectionView {
   static readonly DEFAULT_RESIZE_THROTTLE: number = 1000
   static readonly DEFAULT_POSITION_IMPROVEMENT_OFFSET: number = 100
 
-  private static readonly DEFAULT_TRANSITION_PROPERTIES = [ 'width', 'height', 'opacity' ]
+  private static readonly DEFAULT_TRANSITION_PROPERTIES = ['width', 'height', 'opacity']
 
   private _wantsResize: boolean = false
   private _resizing: boolean = false
@@ -381,11 +381,11 @@ export default class CollectionView {
                               element.offsetHeight)
 
         const improvedPositions = improvePositions
-            ? this.getImprovedPositions(currentPosition, finalPosition, size)
-            : undefined
+          ? this.getImprovedPositions(currentPosition, finalPosition, size)
+          : undefined
 
         if (improvedPositions !== undefined) {
-          const improvedStartPosition = improvedPositions[ 0 ]
+          const improvedStartPosition = improvedPositions[0]
           if (improvedStartPosition !== undefined) {
             this.applyElementPosition(element, improvedStartPosition, elementIndex)
             element.getBoundingClientRect()
@@ -394,23 +394,23 @@ export default class CollectionView {
 
         let improvedEndPosition: Position | undefined
         if (improvedPositions !== undefined) {
-          improvedEndPosition = improvedPositions[ 1 ]
+          improvedEndPosition = improvedPositions[1]
         }
 
         let maxElementTransitionDuration = 0
         if (animationReason) {
           maxElementTransitionDuration =
-              this.performTransition(elementIndex,
-                                     element,
-                                     [ 'transform' ],
-                                     animationReason)
+            this.performTransition(elementIndex,
+                                   element,
+                                   ['transform'],
+                                   animationReason)
         }
 
         // TODO: invoke onTransitionEnd right away if maxElementTransitionDuration == 0, as it won't be called otherwise?
 
         const temporaryEndPosition = improvedEndPosition !== undefined
-            ? improvedEndPosition
-            : finalPosition
+          ? improvedEndPosition
+          : finalPosition
         this.applyElementPosition(element, temporaryEndPosition, elementIndex)
 
         promises.push(new Promise<void>((resolve, reject) => {
@@ -433,7 +433,7 @@ export default class CollectionView {
       })
 
       Promise.all(promises)
-          .then(() => resolve(), reject)
+        .then(() => resolve(), reject)
     })
   }
 
@@ -446,18 +446,18 @@ export default class CollectionView {
 
     const properties = this.configureElementTransitionProperties(element, extraProperties)
     const animations = properties
-        .map(property =>
-                 this.getElementAnimation(elementIndex, property, animationReason))
+      .map(property =>
+             this.getElementAnimation(elementIndex, property, animationReason))
     const durations = animations.map(animation => animation.duration)
 
     const delays = animations
-        .map((animation: ElementAnimation): number => {
-          if (animation.duration <= 0) {
-            return 0
-          }
+      .map((animation: ElementAnimation): number => {
+        if (animation.duration <= 0) {
+          return 0
+        }
 
-          return this.getAnimationDelay(elementIndex, animation)
-        })
+        return this.getAnimationDelay(elementIndex, animation)
+      })
 
     this.configureElementTransitionDurations(element, durations)
     this.configureElementTransitionDelays(element, delays)
@@ -477,8 +477,8 @@ export default class CollectionView {
 
     const elementInfo = this.layout.getElementInfo(elementIndex)
     const animationDuration =
-        Math.max(0,
-                 this.delegate.getAnimationDuration(elementIndex, elementInfo, property, reason))
+      Math.max(0,
+               this.delegate.getAnimationDuration(elementIndex, elementInfo, property, reason))
     return new ElementAnimation(animationDuration, property, reason, elementInfo)
   }
 
@@ -590,10 +590,10 @@ export default class CollectionView {
     const maxY = minY + height
 
     return (
-        minX < containerMaxX
-        && maxX > containerMinX
-        && maxY > containerMinY
-        && minY < containerMaxY
+      minX < containerMaxX
+      && maxX > containerMinX
+      && maxY > containerMinY
+      && minY < containerMaxY
     )
   }
 
@@ -614,7 +614,7 @@ export default class CollectionView {
     }
 
     this.updateLayout(this._layout)
-        .then(completion, completion)
+      .then(completion, completion)
   }
 
   public updateLayout(newLayout: CollectionViewLayout, animated: boolean = true): Promise<void> {
@@ -627,7 +627,7 @@ export default class CollectionView {
 
       const newContainerSize = this.currentContainerSize
       const newPosition =
-          newLayout.convertPositionInSize(this._scrollPosition, newContainerSize, this._layout)
+        newLayout.convertPositionInSize(this._scrollPosition, newContainerSize, this._layout)
 
       // newPosition might not be the final scroll position:
       // when at the bottom and the content is becoming smaller, the view is scrolled up
@@ -635,14 +635,14 @@ export default class CollectionView {
       const finalContentSize = newLayout.getContentSize(this._count, newContainerSize)
 
       const finalPosition = new Position(
-          Math.max(0,
-              newPosition.x - Math.abs(Math.min(0,
-              finalContentSize.width
-              - (newPosition.x + newContainerSize.width)))),
-          Math.max(0,
-              newPosition.y - Math.abs(Math.min(0,
-              finalContentSize.height
-              - (newPosition.y + newContainerSize.height))))
+        Math.max(0,
+          newPosition.x - Math.abs(Math.min(0,
+          finalContentSize.width
+          - (newPosition.x + newContainerSize.width)))),
+        Math.max(0,
+          newPosition.y - Math.abs(Math.min(0,
+          finalContentSize.height
+          - (newPosition.y + newContainerSize.height))))
       )
 
       const finalIndices = this.getIndices(newLayout, finalPosition, newContainerSize)
@@ -699,16 +699,16 @@ export default class CollectionView {
                                        false,
                                        operation,
                                        animated
-                                           ? CollectionViewAnimationReason.LAYOUT_UPDATE
-                                           : undefined)
-            .then(() => {
-              this.updateCurrentIndices()
+                                         ? CollectionViewAnimationReason.LAYOUT_UPDATE
+                                         : undefined)
+          .then(() => {
+            this.updateCurrentIndices()
 
-              this.addScrollListener()
+            this.addScrollListener()
 
-              resolve()
-            })
-            .catch(reject)
+            resolve()
+          })
+          .catch(reject)
 
         this._elements.forEach((element, index) => {
           assert(() => index >= 0)
@@ -768,8 +768,8 @@ export default class CollectionView {
       if (!(movedIndexMap instanceof Map)) {
         const movedIndexObject = movedIndexMap as {[key: string]: any}
         const pairs = Object.keys(movedIndexObject)
-            .map((key): [ number, number ] =>
-                     [ Number(key), Number(movedIndexObject[ key ]) ])
+          .map((key): [number, number] =>
+                 [Number(key), Number(movedIndexObject[key])])
         movedIndexMap = new Map<number, number>(pairs)
       }
 
@@ -801,7 +801,7 @@ export default class CollectionView {
       // scroll if current position will be out of bounds
 
       const {width: newContentWidth, height: newContentHeight} =
-          this._layout.getContentSize(this._count, this._containerSize)
+        this._layout.getContentSize(this._count, this._containerSize)
 
       const {width: containerWidth, height: containerHeight} = this._containerSize
       const {x: scrollX, y: scrollY} = this._scrollPosition
@@ -814,12 +814,12 @@ export default class CollectionView {
 
       if (adjustX || adjustY) {
         this._scrollPosition =
-            new Position(adjustX
-                             ? Math.max(0, scrollX - (right - newContentWidth))
-                             : scrollX,
-                         adjustY
-                             ? Math.max(0, scrollY - (bottom - newContentHeight))
-                             : scrollY)
+          new Position(adjustX
+                         ? Math.max(0, scrollX - (right - newContentWidth))
+                         : scrollX,
+                       adjustY
+                         ? Math.max(0, scrollY - (bottom - newContentHeight))
+                         : scrollY)
 
         // TODO: how to handle variable duration here?
         this.scrollTo(this._scrollPosition, animated)
@@ -836,16 +836,16 @@ export default class CollectionView {
         }
 
         const disappearedStyle: Style =
-            Object.assign({zIndex: '0', opacity: '0'},
-                          this.getStyle(elementIndex, element,
-                                        CollectionViewAnimationPhase.ELEMENT_DISAPPEARED))
+          Object.assign({zIndex: '0', opacity: '0'},
+                        this.getStyle(elementIndex, element,
+                                      CollectionViewAnimationPhase.ELEMENT_DISAPPEARED))
 
         // TODO: include 'transform' in properties?
         const maxTransitionDuration =
-            this.performTransition(elementIndex,
-                                   element,
-                                   Object.keys(disappearedStyle),
-                                   CollectionViewAnimationReason.ELEMENT_REMOVAL)
+          this.performTransition(elementIndex,
+                                 element,
+                                 Object.keys(disappearedStyle),
+                                 CollectionViewAnimationReason.ELEMENT_REMOVAL)
 
         this.applyStyle(disappearedStyle, element)
 
@@ -891,13 +891,13 @@ export default class CollectionView {
           newIndex = movedIndex
         } else {
           while (removedOrMovedReorderOffset < removedOrMovedIndices.length
-                 && removedOrMovedIndices[ removedOrMovedReorderOffset ] <= index) {
+                 && removedOrMovedIndices[removedOrMovedReorderOffset] <= index) {
             removedOrMovedReorderOffset += 1
           }
 
           let addedOrMovedReorderOffset = 0
           while (addedOrMovedReorderOffset < addedOrMovedIndices.length
-                 && (addedOrMovedIndices[ addedOrMovedReorderOffset ]
+                 && (addedOrMovedIndices[addedOrMovedReorderOffset]
                      <= index - removedOrMovedReorderOffset + addedOrMovedReorderOffset)) {
             addedOrMovedReorderOffset += 1
           }
@@ -925,12 +925,12 @@ export default class CollectionView {
           oldIndex = reverseMovedIndex
         } else {
           while (addedOrMovedLoadOffset < addedOrMovedIndices.length
-                 && addedOrMovedIndices[ addedOrMovedLoadOffset ] <= index) {
+                 && addedOrMovedIndices[addedOrMovedLoadOffset] <= index) {
             addedOrMovedLoadOffset += 1
           }
 
           while (removedOrMovedLoadOffset < removedOrMovedIndices.length
-                 && (removedOrMovedIndices[ removedOrMovedLoadOffset ]
+                 && (removedOrMovedIndices[removedOrMovedLoadOffset]
                      <= index - addedOrMovedLoadOffset + removedOrMovedLoadOffset)) {
             removedOrMovedLoadOffset += 1
           }
@@ -953,9 +953,9 @@ export default class CollectionView {
         if (isNew) {
 
           const appearingStyle: Style =
-              Object.assign({opacity: '0'},
-                            this.getStyle(layoutIndex, element,
-                                          CollectionViewAnimationPhase.ELEMENT_APPEARING))
+            Object.assign({opacity: '0'},
+                          this.getStyle(layoutIndex, element,
+                                        CollectionViewAnimationPhase.ELEMENT_APPEARING))
 
           this.applyStyle(appearingStyle, element)
 
@@ -972,9 +972,9 @@ export default class CollectionView {
 
 
           const appearedStyle: Style =
-              Object.assign({opacity: '1'},
-                            this.getStyle(layoutIndex, element,
-                                          CollectionViewAnimationPhase.ELEMENT_APPEARED))
+            Object.assign({opacity: '1'},
+                          this.getStyle(layoutIndex, element,
+                                        CollectionViewAnimationPhase.ELEMENT_APPEARED))
 
           this.applyStyle(appearedStyle, element)
 
@@ -1000,36 +1000,36 @@ export default class CollectionView {
                                          true,
                                          operation,
                                          animated
-                                             ? CollectionViewAnimationReason.ELEMENT_MOVE
-                                             : undefined)
-              .then(() => {
+                                           ? CollectionViewAnimationReason.ELEMENT_MOVE
+                                           : undefined)
+            .then(() => {
 
 
-                this.updateCurrentIndices()
+              this.updateCurrentIndices()
 
 
-                resolve()
-              })
-              .catch(reject)
+              resolve()
+            })
+            .catch(reject)
 
         }, 0)
       }))
 
       Promise.all(promises)
-          .then(() => {
-            if (countDifference < 0) {
-              this.updateContentSize(this._layout)
-            }
+        .then(() => {
+          if (countDifference < 0) {
+            this.updateContentSize(this._layout)
+          }
 
-            this.addScrollListener()
+          this.addScrollListener()
 
-            resolve()
-          })
-          .catch(reason => {
-            this.addScrollListener()
+          resolve()
+        })
+        .catch(reason => {
+          this.addScrollListener()
 
-            reject(reason)
-          })
+          reject(reason)
+        })
     })
   }
 
