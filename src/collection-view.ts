@@ -70,7 +70,7 @@ export default class CollectionView {
   private static readonly EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
 
   static readonly DEFAULT_THRESHOLD: number = 3000
-  static readonly DEFAULT_ANIMATION_DURATION: number = 1000
+  static readonly DEFAULT_ANIMATION_DURATION: number = 400
   static readonly DEFAULT_RESIZE_THROTTLE: number = 1000
   static readonly DEFAULT_POSITION_IMPROVEMENT_OFFSET: number = 100
 
