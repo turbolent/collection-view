@@ -1068,7 +1068,7 @@ export default class CollectionView {
   // configures the element's transition properties and returns them
   private configureElementTransitionProperties(element: HTMLElement, extraProperties: string[] = []): string[] {
     const properties = Array.from(new Set(CollectionView.DEFAULT_TRANSITION_PROPERTIES.concat(extraProperties)))
-    element.style.transitionProperty = Array(properties.values()).join(',')
+    element.style.transitionProperty = properties.join(',')
     return properties
   }
 
