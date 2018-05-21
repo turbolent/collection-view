@@ -1,7 +1,7 @@
 import CollectionViewLayout from './layout'
 import style from './style.css'
 import { Line, Position, Range, Ranges, Size } from './types'
-import { assert, coalesce, intersect, range, sort, unique } from './utils'
+import { assert, coalesce, intersect, range, sort, Style, unique } from './utils'
 import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
 import CollectionViewDelegate from './delegate'
@@ -15,8 +15,6 @@ export interface CollectionViewThresholds {
 
 export interface CollectionViewParameters {
   readonly animationDuration?: number
-  readonly appearingClassName?: string
-  readonly disappearingClassName?: string
   readonly resizeThrottleDuration?: number
   readonly thresholds?: {
     readonly left?: number
@@ -32,6 +30,12 @@ export enum CollectionViewAnimationReason {
   ELEMENT_REMOVAL,
   ELEMENT_MOVE,
   LAYOUT_UPDATE
+}
+
+export enum CollectionViewAnimationPhase {
+  ELEMENT_APPEARING,
+  ELEMENT_APPEARED,
+  ELEMENT_DISAPPEARED
 }
 
 class InvalidArgumentError extends Error {}
@@ -66,13 +70,11 @@ export default class CollectionView {
   private static readonly EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
 
   static readonly DEFAULT_THRESHOLD: number = 3000
-  static readonly DEFAULT_APPEARING_CLASS_NAME: string= 'appearing'
-  static readonly DEFAULT_DISAPPEARING_CLASS_NAME: string = 'disappearing'
-  static readonly DEFAULT_ANIMATION_DURATION: number = 400
+  static readonly DEFAULT_ANIMATION_DURATION: number = 1000
   static readonly DEFAULT_RESIZE_THROTTLE: number = 1000
   static readonly DEFAULT_POSITION_IMPROVEMENT_OFFSET: number = 100
 
-  private static readonly NORMAL_TRANSITION_PROPERTIES = ['width', 'height', 'opacity']
+  private static readonly DEFAULT_TRANSITION_PROPERTIES = [ 'width', 'height', 'opacity' ]
 
   private _wantsResize: boolean = false
   private _resizing: boolean = false
@@ -94,8 +96,6 @@ export default class CollectionView {
   readonly delegate: CollectionViewDelegate
 
   readonly animationDuration: number
-  readonly appearingClassName: string
-  readonly disappearingClassName: string
   readonly thresholds: CollectionViewThresholds
   readonly resizeThrottleDuration: number
   readonly positionImprovementOffset: number
@@ -136,11 +136,6 @@ export default class CollectionView {
     this.animationDuration = coalesce(parameters.animationDuration,
                                       CollectionView.DEFAULT_ANIMATION_DURATION)
 
-    this.appearingClassName = coalesce(parameters.appearingClassName,
-                                       CollectionView.DEFAULT_APPEARING_CLASS_NAME)
-    this.disappearingClassName = coalesce(parameters.disappearingClassName,
-                                          CollectionView.DEFAULT_DISAPPEARING_CLASS_NAME)
-
     const thresholds = parameters.thresholds || {}
     this.thresholds = {
       left: coalesce(thresholds.left, CollectionView.DEFAULT_THRESHOLD),
@@ -163,7 +158,8 @@ export default class CollectionView {
                                        CollectionView.DEFAULT_RESIZE_THROTTLE),
                               {leading: false})
 
-    this._container.addEventListener('scroll', this.onScroll, false)
+    this.addScrollListener()
+
     window.addEventListener('resize', this._onResize, false)
 
     // DEBUG: keep scroll position
@@ -190,7 +186,7 @@ export default class CollectionView {
 
     if (elementHandler) {
       this._elements.forEach(element =>
-                               elementHandler(element))
+                                 elementHandler(element))
     }
 
     this._elements.forEach(element => this.removeFromParent(element))
@@ -213,9 +209,13 @@ export default class CollectionView {
   }
 
   private updateContentSize(layout: CollectionViewLayout): void {
+
     const containerSize = this.currentContainerSize
     this._contentSize = layout.getContentSize(this._count, containerSize)
     const {width, height} = this._contentSize
+
+    console.log('updateContentSize', width, height)
+
     this.content.style.minWidth = `${width}px`
     this.content.style.minHeight = `${height}px`
   }
@@ -301,18 +301,18 @@ export default class CollectionView {
     // add missing elements
     const currentIndices = this._visibleIndices
     newIndices.filter(index => currentIndices.indexOf(index) < 0)
-      .forEach(index => {
-        // reuse one of the invalid/old elements, or create a new element
-        const element = invalidElements.pop()
-          || this.createAndAddElement()
-        this.configureElement(this._layout, element, index)
-        this.getAndApplyElementPosition(this._layout, element, index)
+        .forEach(index => {
+          // reuse one of the invalid/old elements, or create a new element
+          const element = invalidElements.pop()
+                          || this.createAndAddElement()
+          this.configureElement(this._layout, element, index)
+          this.getAndApplyElementPosition(this._layout, element, index)
 
-        // TODO: this.configureElementTransitionProperties(element, false) ?
+          // TODO: this.configureElementTransitionProperties(element) ?
 
-        assert(() => index >= 0)
-        this._elements.set(index, element)
-      })
+          assert(() => index >= 0)
+          this._elements.set(index, element)
+        })
     this._visibleIndices = newIndices
 
     // actually remove old elements, which weren't reused
@@ -350,7 +350,7 @@ export default class CollectionView {
     const element = document.createElement('div')
     element.classList.add(style.element)
 
-    this.configureElementTransitionProperties(element, false)
+    this.configureElementTransitionProperties(element)
 
     this.content.appendChild(element)
     return element
@@ -402,7 +402,11 @@ export default class CollectionView {
 
         let maxElementTransitionDuration = 0
         if (animationReason) {
-          maxElementTransitionDuration = this.performTransition(elementIndex, element, true, animationReason)
+          maxElementTransitionDuration =
+              this.performTransition(elementIndex,
+                                     element,
+                                     [ 'transform' ],
+                                     animationReason)
         }
 
         // TODO: invoke onTransitionEnd right away if maxElementTransitionDuration == 0, as it won't be called otherwise?
@@ -417,7 +421,7 @@ export default class CollectionView {
           operation.addRejection(reject)
 
           this.delayForOperation(operation, () => {
-            this.configureElementTransitionProperties(element, false)
+            this.configureElementTransitionProperties(element)
 
             // TODO: also configureElementTransitionDurations and configureElementTransitionDelays ?
 
@@ -440,10 +444,10 @@ export default class CollectionView {
   // returns total duration (max delay + max duration)
   private performTransition(elementIndex: number,
                             element: HTMLElement,
-                            includeTransform: boolean,
+                            extraProperties: string[],
                             animationReason: CollectionViewAnimationReason): number {
 
-    const properties = this.configureElementTransitionProperties(element, includeTransform)
+    const properties = this.configureElementTransitionProperties(element, extraProperties)
     const animations = properties
         .map(property =>
                  this.getElementAnimation(elementIndex, property, animationReason))
@@ -471,7 +475,7 @@ export default class CollectionView {
     // if the delegate does not implement the animation duration method:
     // use the constant, and no need for getting layout's element info
     if (!this.delegate.getAnimationDuration) {
-      return new ElementAnimation(this.animationDuration, property, reason,undefined)
+      return new ElementAnimation(this.animationDuration, property, reason, undefined)
     }
 
     const elementInfo = this.layout.getElementInfo(elementIndex)
@@ -497,7 +501,7 @@ export default class CollectionView {
 
   private getImprovedPositions(currentPosition: Position,
                                newPosition: Position,
-                               size: Size): [Position | undefined, Position | undefined] | undefined {
+                               size: Size): [ Position | undefined, Position | undefined ] | undefined {
 
     const {width, height} = size
 
@@ -526,61 +530,61 @@ export default class CollectionView {
     // check bottom
 
     const adjustedBottomLine =
-      new Line(new Position(minX, maxY + offset),
-               new Position(maxX, maxY + offset))
+        new Line(new Position(minX, maxY + offset),
+                 new Position(maxX, maxY + offset))
 
     const bottomIntersectionPoint = intersect(transitionLine, adjustedBottomLine)
     if (bottomIntersectionPoint) {
       return movingIn
-        ? [bottomIntersectionPoint, undefined]
-        : [undefined, bottomIntersectionPoint]
+          ? [ bottomIntersectionPoint, undefined ]
+          : [ undefined, bottomIntersectionPoint ]
     }
 
     // check top
 
     const adjustedTopLine =
-      new Line(new Position(minX, minY - height - offset),
-               new Position(maxX, minY - height - offset))
+        new Line(new Position(minX, minY - height - offset),
+                 new Position(maxX, minY - height - offset))
 
     const topIntersectionPoint = intersect(transitionLine, adjustedTopLine)
     if (topIntersectionPoint) {
       return movingIn
-        ? [topIntersectionPoint, undefined]
-        : [undefined, topIntersectionPoint]
+          ? [ topIntersectionPoint, undefined ]
+          : [ undefined, topIntersectionPoint ]
     }
 
     // check left
 
     const adjustedLeftLine =
-      new Line(new Position(minX - width - offset, minY),
-               new Position(minX - width - offset, maxY))
+        new Line(new Position(minX - width - offset, minY),
+                 new Position(minX - width - offset, maxY))
 
     const leftIntersectionPoint = intersect(transitionLine, adjustedLeftLine)
     if (leftIntersectionPoint) {
       return movingIn
-        ? [leftIntersectionPoint, undefined]
-        : [undefined, leftIntersectionPoint]
+          ? [ leftIntersectionPoint, undefined ]
+          : [ undefined, leftIntersectionPoint ]
     }
 
     // check right
 
     const adjustedRightLine =
-      new Line(new Position(maxX + offset, minY),
-               new Position(maxX + offset, maxY))
+        new Line(new Position(maxX + offset, minY),
+                 new Position(maxX + offset, maxY))
 
     const rightIntersectionPoint = intersect(transitionLine, adjustedRightLine)
     if (rightIntersectionPoint) {
       return movingIn
-        ? [rightIntersectionPoint, undefined]
-        : [undefined, rightIntersectionPoint]
+          ? [ rightIntersectionPoint, undefined ]
+          : [ undefined, rightIntersectionPoint ]
     }
 
     return
   }
 
   isVisible({x: minX, y: minY}: Position, {width, height}: Size): boolean {
-    const {width: containerWidth, height: containerHeight } = this._containerSize
-    const {x: containerMinX, y: containerMinY } = this._scrollPosition
+    const {width: containerWidth, height: containerHeight} = this._containerSize
+    const {x: containerMinX, y: containerMinY} = this._scrollPosition
 
     const containerMaxX = containerMinX + containerWidth
     const containerMaxY = containerMinY + containerHeight
@@ -589,10 +593,10 @@ export default class CollectionView {
     const maxY = minY + height
 
     return (
-      minX < containerMaxX
-      && maxX > containerMinX
-      && maxY > containerMinY
-      && minY < containerMaxY
+        minX < containerMaxX
+        && maxX > containerMinX
+        && maxY > containerMinY
+        && minY < containerMaxY
     )
   }
 
@@ -613,20 +617,20 @@ export default class CollectionView {
     }
 
     this.updateLayout(this._layout)
-      .then(completion, completion)
+        .then(completion, completion)
   }
 
   public updateLayout(newLayout: CollectionViewLayout, animated: boolean = true): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const operation = this.startOperation(reject)
 
-      this._container.removeEventListener('scroll', this.onScroll, false)
+      this.removeScrollListener()
 
       // update with elements that will be visible after resize
 
       const newContainerSize = this.currentContainerSize
       const newPosition =
-        newLayout.convertPositionInSize(this._scrollPosition, newContainerSize, this._layout)
+          newLayout.convertPositionInSize(this._scrollPosition, newContainerSize, this._layout)
 
       // newPosition might not be the final scroll position:
       // when at the bottom and the content is becoming smaller, the view is scrolled up
@@ -634,14 +638,14 @@ export default class CollectionView {
       const finalContentSize = newLayout.getContentSize(this._count, newContainerSize)
 
       const finalPosition = new Position(
-        Math.max(0,
-                 newPosition.x - Math.abs(Math.min(0,
-                                                   finalContentSize.width
-                                                       - (newPosition.x + newContainerSize.width)))),
-        Math.max(0,
-                 newPosition.y - Math.abs(Math.min(0,
-                                                   finalContentSize.height
-                                                       - (newPosition.y + newContainerSize.height))))
+          Math.max(0,
+              newPosition.x - Math.abs(Math.min(0,
+              finalContentSize.width
+              - (newPosition.x + newContainerSize.width)))),
+          Math.max(0,
+              newPosition.y - Math.abs(Math.min(0,
+              finalContentSize.height
+              - (newPosition.y + newContainerSize.height))))
       )
 
       const finalIndices = this.getIndices(newLayout, finalPosition, newContainerSize)
@@ -703,9 +707,7 @@ export default class CollectionView {
             .then(() => {
               this.updateCurrentIndices()
 
-              if (this._installed) {
-                this._container.addEventListener('scroll', this.onScroll, false)
-              }
+              this.addScrollListener()
 
               resolve()
             })
@@ -767,14 +769,14 @@ export default class CollectionView {
 
       // handle legacy Object
       if (!(movedIndexMap instanceof Map)) {
-        const movedIndexObject = movedIndexMap as { [key: string]: any }
+        const movedIndexObject = movedIndexMap as {[key: string]: any}
         const pairs = Object.keys(movedIndexObject)
-          .map((key): [number, number] =>
-                 [Number(key), Number(movedIndexObject[key])])
+            .map((key): [ number, number ] =>
+                     [ Number(key), Number(movedIndexObject[ key ]) ])
         movedIndexMap = new Map<number, number>(pairs)
       }
 
-      this._container.removeEventListener('scroll', this.onScroll, false)
+      this.removeScrollListener()
 
       // prepare moved mapping
 
@@ -802,7 +804,7 @@ export default class CollectionView {
       // scroll if current position will be out of bounds
 
       const {width: newContentWidth, height: newContentHeight} =
-        this._layout.getContentSize(this._count, this._containerSize)
+          this._layout.getContentSize(this._count, this._containerSize)
 
       const {width: containerWidth, height: containerHeight} = this._containerSize
       const {x: scrollX, y: scrollY} = this._scrollPosition
@@ -815,12 +817,12 @@ export default class CollectionView {
 
       if (adjustX || adjustY) {
         this._scrollPosition =
-          new Position(adjustX
-                         ? Math.max(0, scrollX - (right - newContentWidth))
-                         : scrollX,
-                       adjustY
-                         ? Math.max(0, scrollY - (bottom - newContentHeight))
-                         : scrollY)
+            new Position(adjustX
+                             ? Math.max(0, scrollX - (right - newContentWidth))
+                             : scrollX,
+                         adjustY
+                             ? Math.max(0, scrollY - (bottom - newContentHeight))
+                             : scrollY)
 
         // TODO: how to handle variable duration here?
         this.scrollTo(this._scrollPosition, animated)
@@ -836,13 +838,19 @@ export default class CollectionView {
           return
         }
 
-        // TODO: include transform?
+        const disappearedStyle: Style =
+            Object.assign({zIndex: '0', opacity: '0'},
+                          this.getStyle(elementIndex, element,
+                                        CollectionViewAnimationPhase.ELEMENT_DISAPPEARED))
+
+        // TODO: include 'transform' in properties?
         const maxTransitionDuration =
-            this.performTransition(elementIndex, element, false,
+            this.performTransition(elementIndex,
+                                   element,
+                                   Object.keys(disappearedStyle),
                                    CollectionViewAnimationReason.ELEMENT_REMOVAL)
 
-        element.classList.add(this.disappearingClassName)
-        element.style.zIndex = '0'
+        this.applyStyle(disappearedStyle, element)
 
         promises.push(new Promise<void>(resolve => {
 
@@ -886,13 +894,13 @@ export default class CollectionView {
           newIndex = movedIndex
         } else {
           while (removedOrMovedReorderOffset < removedOrMovedIndices.length
-                 && removedOrMovedIndices[removedOrMovedReorderOffset] <= index) {
+                 && removedOrMovedIndices[ removedOrMovedReorderOffset ] <= index) {
             removedOrMovedReorderOffset += 1
           }
 
           let addedOrMovedReorderOffset = 0
           while (addedOrMovedReorderOffset < addedOrMovedIndices.length
-                 && (addedOrMovedIndices[addedOrMovedReorderOffset]
+                 && (addedOrMovedIndices[ addedOrMovedReorderOffset ]
                      <= index - removedOrMovedReorderOffset + addedOrMovedReorderOffset)) {
             addedOrMovedReorderOffset += 1
           }
@@ -920,19 +928,18 @@ export default class CollectionView {
           oldIndex = reverseMovedIndex
         } else {
           while (addedOrMovedLoadOffset < addedOrMovedIndices.length
-                 && addedOrMovedIndices[addedOrMovedLoadOffset] <= index) {
+                 && addedOrMovedIndices[ addedOrMovedLoadOffset ] <= index) {
             addedOrMovedLoadOffset += 1
           }
 
           while (removedOrMovedLoadOffset < removedOrMovedIndices.length
-                 && (removedOrMovedIndices[removedOrMovedLoadOffset]
+                 && (removedOrMovedIndices[ removedOrMovedLoadOffset ]
                      <= index - addedOrMovedLoadOffset + removedOrMovedLoadOffset)) {
             removedOrMovedLoadOffset += 1
           }
 
           oldIndex = index - addedOrMovedLoadOffset + removedOrMovedLoadOffset
         }
-
 
         assert(() => index >= 0)
         const existingElement = this._elements.get(index)
@@ -948,15 +955,31 @@ export default class CollectionView {
 
         if (isNew) {
 
-          // TODO: include transform?
-          this.performTransition(layoutIndex, element, false,
-                                 CollectionViewAnimationReason.ELEMENT_ADDITION)
+          const appearingStyle: Style =
+              Object.assign({opacity: '0'},
+                            this.getStyle(layoutIndex, element,
+                                          CollectionViewAnimationPhase.ELEMENT_APPEARING))
 
-          element.classList.add(this.appearingClassName)
+          this.applyStyle(appearingStyle, element)
+
           // TODO: trigger restyle in a more proper way
           // tslint:disable-next-line:no-unused-expression
           window.getComputedStyle(element).opacity
-          element.classList.remove(this.appearingClassName)
+
+          // TODO: include 'transform' property?
+          // TODO: include appearedStyle properties?
+          this.performTransition(layoutIndex,
+                                 element,
+                                 Object.keys(appearingStyle),
+                                 CollectionViewAnimationReason.ELEMENT_ADDITION)
+
+
+          const appearedStyle: Style =
+              Object.assign({opacity: '1'},
+                            this.getStyle(layoutIndex, element,
+                                          CollectionViewAnimationPhase.ELEMENT_APPEARED))
+
+          this.applyStyle(appearedStyle, element)
 
           // TODO: reset transition properties/durations/delays after animation completed?
 
@@ -983,26 +1006,54 @@ export default class CollectionView {
                                              ? CollectionViewAnimationReason.ELEMENT_MOVE
                                              : undefined)
               .then(() => {
-                if (countDifference < 0) {
-                  this.updateContentSize(this._layout)
-                }
+
 
                 this.updateCurrentIndices()
+
 
                 resolve()
               })
               .catch(reject)
 
-          if (this._installed) {
-            this._container.addEventListener('scroll', this.onScroll, false)
-          }
-
         }, 0)
       }))
 
       Promise.all(promises)
-        .then(() => resolve(), reject)
+          .then(() => {
+            if (countDifference < 0) {
+              this.updateContentSize(this._layout)
+            }
+
+            this.addScrollListener()
+
+            resolve()
+          })
+          .catch(reason => {
+            this.addScrollListener()
+
+            reject(reason)
+          })
     })
+  }
+
+  private addScrollListener() {
+    if (!this._installed) {
+      return
+    }
+
+    this._container.addEventListener('scroll', this.onScroll, false)
+  }
+
+  private removeScrollListener() {
+    this._container.removeEventListener('scroll', this.onScroll, false)
+  }
+
+  private applyStyle(style: Style, element: HTMLElement) {
+    for (let property in style) {
+      if (!style.hasOwnProperty(property))
+        continue
+      element.style.setProperty(property, style[property])
+    }
   }
 
   private startOperation(reject: (reason?: any) => void): Operation {
@@ -1033,9 +1084,8 @@ export default class CollectionView {
   }
 
   // configures the element's transition properties and returns them
-  private configureElementTransitionProperties(element: HTMLElement, includeTransform: boolean): string[] {
-    const properties = CollectionView.NORMAL_TRANSITION_PROPERTIES
-        .concat(includeTransform ? ['transform'] : [])
+  private configureElementTransitionProperties(element: HTMLElement, extraProperties: string[] = []): string[] {
+    const properties = CollectionView.DEFAULT_TRANSITION_PROPERTIES.concat(extraProperties)
     element.style.transitionProperty = properties.join(',')
     return properties
   }
@@ -1046,5 +1096,17 @@ export default class CollectionView {
 
   private configureElementTransitionDelays(element: HTMLElement, delays: number[]) {
     element.style.transitionDelay = delays.map(delay => delay + 'ms').join(',')
+  }
+
+  private getStyle(elementIndex: number, element: HTMLElement, phase: CollectionViewAnimationPhase): Style {
+    if (!this.delegate.getStyle) {
+      return {}
+    }
+    const position = this._positions.get(element)
+    if (!position) {
+      throw Error("missing position for element: " + element)
+    }
+    const elementInfo = this.layout.getElementInfo(elementIndex)
+    return this.delegate.getStyle(elementIndex, phase, elementInfo, position) || {}
   }
 }

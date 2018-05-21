@@ -61,3 +61,11 @@ export function intersect(line1: Line, line2: Line): Position | undefined {
     y1 + ua * (y2 - y1)
   )
 }
+
+export type Partial<T> = {
+  readonly [P in keyof T]?: T[P]
+}
+
+export type Style = Partial<CSSStyleDeclaration> & {
+  [key: string]: any
+}

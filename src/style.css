@@ -12,10 +12,4 @@
 .element {
     display: block;
     position: absolute;
-    opacity: 1
-}
-
-:global(.appearing),
-:global(.disappearing) {
-    opacity: 0;
 }
