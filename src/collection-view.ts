@@ -1,6 +1,6 @@
 import CollectionViewLayout from './layout'
 import style from './style.css'
-import { Line, Position, Range, Ranges, Size } from './types'
+import { Animation, Line, Position, Range, Ranges, Required, Size } from './types'
 import { assert, coalesce, intersect, range, sort, Style, unique } from './utils'
 import * as BezierEasing from 'bezier-easing'
 import throttle from 'lodash-es/throttle'
@@ -59,15 +59,8 @@ class Operation {
   }
 }
 
-class ElementAnimation {
-  constructor(readonly duration: number,
-              readonly property: string,
-              readonly reason: CollectionViewAnimationReason,
-              readonly elementInfo?: any) {}
-}
-
 export default class CollectionView {
-  private static readonly EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
+  private static readonly SCROLL_EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
 
   static readonly DEFAULT_THRESHOLD: number = 3000
   static readonly DEFAULT_ANIMATION_DURATION: number = 400
@@ -91,6 +84,7 @@ export default class CollectionView {
   private _container: HTMLElement
   private _layout: CollectionViewLayout
   private _currentOperation?: Operation
+  private _defaultAnimation: Animation
 
   readonly content: HTMLElement
   readonly delegate: CollectionViewDelegate
@@ -135,6 +129,8 @@ export default class CollectionView {
 
     this.animationDuration = coalesce(parameters.animationDuration,
                                       CollectionView.DEFAULT_ANIMATION_DURATION)
+
+    this._defaultAnimation = new Animation(this.animationDuration, 0, "initial")
 
     const thresholds = parameters.thresholds || {}
     this.thresholds = {
@@ -447,53 +443,42 @@ export default class CollectionView {
     const properties = this.configureElementTransitionProperties(element, extraProperties)
     const animations = properties
       .map(property =>
-             this.getElementAnimation(elementIndex, property, animationReason))
+             this.getAnimation(elementIndex, property, animationReason))
     const durations = animations.map(animation => animation.duration)
-
-    const delays = animations
-      .map((animation: ElementAnimation): number => {
-        if (animation.duration <= 0) {
-          return 0
-        }
-
-        return this.getAnimationDelay(elementIndex, animation)
-      })
+    const delays = animations.map(animation => animation.delay)
+    const timingFunctions = animations.map(animation => animation.timingFunction)
 
     this.configureElementTransitionDurations(element, durations)
     this.configureElementTransitionDelays(element, delays)
+    this.configureElementTransitionTimingFunctions(element, timingFunctions)
 
     return Math.max(...delays) + Math.max(...durations)
   }
 
-  private getElementAnimation(elementIndex: number,
-                              property: string,
-                              reason: CollectionViewAnimationReason): ElementAnimation {
+  private getAnimation(elementIndex: number,
+                       property: string,
+                       reason: CollectionViewAnimationReason): Required<Animation> {
 
-    // if the delegate does not implement the animation duration method:
-    // use the constant, and no need for getting layout's element info
-    if (!this.delegate.getAnimationDuration) {
-      return new ElementAnimation(this.animationDuration, property, reason, undefined)
+    // if the delegate does not implement the animation method, use the default animation constant
+    if (!this.delegate.getAnimation) {
+      return this._defaultAnimation as Required<Animation>
     }
 
     const elementInfo = this.layout.getElementInfo(elementIndex)
-    const animationDuration =
-      Math.max(0,
-               this.delegate.getAnimationDuration(elementIndex, elementInfo, property, reason))
-    return new ElementAnimation(animationDuration, property, reason, elementInfo)
-  }
-
-  private getAnimationDelay(elementIndex: number, animation: ElementAnimation): number {
-
-    // if the delegate does not implement the animation delay method, use none
-    if (!this.delegate.getAnimationDelay) {
-      return 0
-    }
-
-    return Math.max(0,
-                    this.delegate.getAnimationDelay(elementIndex,
-                                                    animation.elementInfo,
-                                                    animation.property,
-                                                    animation.reason))
+    const delegateAnimation = this.delegate.getAnimation(elementIndex, elementInfo, property, reason)
+    const duration =
+      typeof delegateAnimation.duration === 'number'
+        ? Math.max(0, delegateAnimation.duration)
+        : this.animationDuration
+    const delay =
+      duration > 0 && typeof delegateAnimation.delay === 'number'
+        ? delegateAnimation.delay
+        : 0
+    const timingFunction =
+      typeof delegateAnimation.timingFunction === 'string'
+        ? delegateAnimation.timingFunction
+        : 'initial'
+    return new Animation(duration, delay, timingFunction) as Required<Animation>
   }
 
   private getImprovedPositions(currentPosition: Position,
@@ -725,7 +710,7 @@ export default class CollectionView {
     if (animated) {
       const start = Date.now()
       const {x: fromX, y: fromY} = this.currentScrollPosition
-      const easing = CollectionView.EASING
+      const easing = CollectionView.SCROLL_EASING
       const scroll = () => {
         const now = Date.now()
         const progress = Math.min(1, (now - start) / this.animationDuration)
@@ -1082,8 +1067,8 @@ export default class CollectionView {
 
   // configures the element's transition properties and returns them
   private configureElementTransitionProperties(element: HTMLElement, extraProperties: string[] = []): string[] {
-    const properties = CollectionView.DEFAULT_TRANSITION_PROPERTIES.concat(extraProperties)
-    element.style.transitionProperty = properties.join(',')
+    const properties = Array.from(new Set(CollectionView.DEFAULT_TRANSITION_PROPERTIES.concat(extraProperties)))
+    element.style.transitionProperty = Array(properties.values()).join(',')
     return properties
   }
 
@@ -1093,6 +1078,10 @@ export default class CollectionView {
 
   private configureElementTransitionDelays(element: HTMLElement, delays: number[]) {
     element.style.transitionDelay = delays.map(delay => delay + 'ms').join(',')
+  }
+
+  private configureElementTransitionTimingFunctions(element: HTMLElement, timingFunctions: string[]) {
+    element.style.transitionTimingFunction = timingFunctions.join(',')
   }
 
   private getStyle(elementIndex: number, element: HTMLElement, phase: CollectionViewAnimationPhase): Style {

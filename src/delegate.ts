@@ -1,5 +1,5 @@
 import CollectionView, { CollectionViewAnimationPhase, CollectionViewAnimationReason } from './collection-view'
-import { Position } from './types'
+import { Animation, Position } from './types'
 import { Style } from './utils'
 
 export default interface CollectionViewDelegate {
@@ -12,9 +12,7 @@ export default interface CollectionViewDelegate {
 
   onScroll?(collectionView: CollectionView): void
 
-  getAnimationDuration?(index: number, info: any, property: string, reason: CollectionViewAnimationReason): number
-
-  getAnimationDelay?(index: number, info: any, property: string, reason: CollectionViewAnimationReason): number
+  getAnimation?(index: number, info: any, property: string, reason: CollectionViewAnimationReason): Animation
 
   getStyle?(index: number, phase: CollectionViewAnimationPhase, info: any, position: Position): Style
 }

@@ -164,3 +164,17 @@ export class Direction {
       : 'Direction.VERTICAL'
   }
 }
+
+export class Animation {
+  constructor(readonly duration?: number,
+              readonly delay?: number,
+              readonly timingFunction?: string) {}
+}
+
+export type Purify<T extends string> = { [P in T]: T; }[T];
+
+export type NonNullable<T> = T & {};
+
+export type Required<T> = {
+  [P in Purify<keyof T>]: NonNullable<T[P]>
+}
