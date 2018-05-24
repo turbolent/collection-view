@@ -91,7 +91,6 @@ export default class CollectionView {
 
   readonly animationDuration: number
   readonly thresholds: CollectionViewThresholds
-  readonly resizeThrottleDuration: number
   readonly positionImprovementOffset: number
 
   get scrollPosition(): Position {
