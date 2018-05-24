@@ -8,9 +8,15 @@ The collection view gets its data from a [delegate](#delegate) and gets its visu
 
 ![Scrolling](demo/scroll.gif)
 
-The collection view also handles resizing of the container properly, maintaining the current position in the collection.
+The collection view also handles resizing of the container properly, maintaining the current position in the collection:
 
 ![Resizing](demo/resize.gif)
+
+Elements can be individually animated:
+
+![Staggering](demo/staggered.gif)
+
+![Pivot](demo/pivot.gif)
 
 
 ## Usage
