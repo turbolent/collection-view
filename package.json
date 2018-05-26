@@ -19,6 +19,7 @@
     "examples/"
   ],
   "scripts": {
+    "build": "webpack --mode development --progress --profile --colors",
     "buildProduction": "webpack --mode production --progress --profile --colors",
     "prepublishOnly": "yarn run buildProduction",
     "lint": "tslint -c tslint.json 'src/**/*.ts'",
