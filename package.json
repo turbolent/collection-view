@@ -19,11 +19,12 @@
     "examples/"
   ],
   "scripts": {
-    "buildProduction": "webpack --env production --progress --profile --colors",
-    "prepublishOnly": "npm run buildProduction",
+    "build": "webpack --mode development --progress --profile --colors",
+    "buildProduction": "webpack --mode production --progress --profile --colors",
+    "prepublishOnly": "yarn run buildProduction",
     "lint": "tslint -c tslint.json 'src/**/*.ts'",
-    "buildTestEnv": "webpack --context tests/env --config tests/env/webpack.config.js",
-    "test": "npm run buildTestEnv && jest"
+    "buildTestEnv": "webpack --mode production --context tests/env --config tests/env/webpack.config.js",
+    "test": "yarn run buildTestEnv && jest"
   },
   "dependencies": {
     "@types/bezier-easing": "2.0.0",
@@ -39,10 +40,11 @@
     "jest": "22.4.4",
     "puppeteer": "1.3.0",
     "style-loader": "0.21.0",
-    "ts-loader": "3.5.0",
+    "ts-loader": "4.3.0",
     "tslint": "5.10.0",
     "typescript": "2.8.3",
-    "webpack": "3.12.0"
+    "webpack": "4.9.1",
+    "webpack-cli": "2.1.4"
   },
   "jest": {
     "moduleFileExtensions": [
