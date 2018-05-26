@@ -1,6 +1,7 @@
 var path = require('path');
 
 module.exports = {
+  mode: 'development',
   entry: "./src/index.jsx",
   output: {
     path: __dirname,

@@ -1,21 +1,6 @@
 const path = require('path')
-const MinifyPlugin = require("babel-minify-webpack-plugin");
-const webpack = require('webpack');
 
-module.exports = (env) => {
-  let plugins = []
-  if (env === 'production') {
-    plugins = [
-      new webpack.DefinePlugin({
-          'process.env.NODE_ENV': JSON.stringify('production')
-      }),
-      new MinifyPlugin()
-    ];
-  }
-
-
-
-  return {
+module.exports = {
     entry: './src/index.ts',
     module: {
       rules: [
@@ -47,7 +32,5 @@ module.exports = (env) => {
       filename: 'index.js',
       path: path.resolve(__dirname, 'dist'),
       libraryTarget: "umd"
-    },
-    plugins
-  }
-};
+    }
+}
