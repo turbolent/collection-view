@@ -1,14 +1,14 @@
 import CollectionView, {
+  CollectionViewAnimationPhase,
   CollectionViewAnimationReason,
   CollectionViewParameters,
-  CollectionViewThresholds,
-  CollectionViewAnimationPhase
+  CollectionViewThresholds
 } from './collection-view'
+import CollectionViewDelegate from './delegate'
 import GridLayout, { GridLayoutParameters } from './grid-layout'
 import CollectionViewLayout from './layout'
 import ListLayout from './list-layout'
-import { Range, Size, Position, Insets, Spacing, Direction, Line, Ranges, Animation } from './types'
-import CollectionViewDelegate from './delegate'
+import { Animation, Direction, Insets, Line, Position, Range, Ranges, Size, Spacing } from './types'
 
 export {
   CollectionView,

@@ -18,7 +18,8 @@
       "allow-pascal-case",
       "allow-leading-underscore"
     ],
-    "max-classes-per-file": false
+    "max-classes-per-file": false,
+    "no-shadowed-variable": false
   },
   "rulesDirectory": []
 }

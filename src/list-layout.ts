@@ -1,5 +1,5 @@
 import CollectionViewLayout from './layout'
-import { Position, Size, Ranges } from './types'
+import { Position, Ranges, Size } from './types'
 import { range } from './utils'
 
 export class ListLayoutElementInfo {

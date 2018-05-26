@@ -1,10 +1,10 @@
+import * as BezierEasing from 'bezier-easing'
+import throttle from 'lodash-es/throttle'
+import CollectionViewDelegate from './delegate'
 import CollectionViewLayout from './layout'
 import style from './style.css'
 import { Animation, Line, Position, Range, Ranges, Required, Size } from './types'
 import { assert, coalesce, intersect, range, sort, Style, unique } from './utils'
-import * as BezierEasing from 'bezier-easing'
-import throttle from 'lodash-es/throttle'
-import CollectionViewDelegate from './delegate'
 
 export interface CollectionViewThresholds {
   readonly left: number
@@ -55,7 +55,7 @@ class Operation {
   }
 
   reject() {
-    this.rejections.forEach(rejection => rejection())
+    this.rejections.forEach((rejection) => rejection())
   }
 }
 
@@ -129,7 +129,7 @@ export default class CollectionView {
     this.animationDuration = coalesce(parameters.animationDuration,
                                       CollectionView.DEFAULT_ANIMATION_DURATION)
 
-    this._defaultAnimation = new Animation(this.animationDuration, 0, "initial")
+    this._defaultAnimation = new Animation(this.animationDuration, 0, 'initial')
 
     const thresholds = parameters.thresholds || {}
     this.thresholds = {
@@ -180,11 +180,11 @@ export default class CollectionView {
     window.removeEventListener('resize', this._onResize, false)
 
     if (elementHandler) {
-      this._elements.forEach(element =>
+      this._elements.forEach((element) =>
                                elementHandler(element))
     }
 
-    this._elements.forEach(element => this.removeFromParent(element))
+    this._elements.forEach((element) => this.removeFromParent(element))
   }
 
   private get currentContainerSize(): Size {
@@ -292,8 +292,8 @@ export default class CollectionView {
 
     // add missing elements
     const currentIndices = this._visibleIndices
-    newIndices.filter(index => currentIndices.indexOf(index) < 0)
-      .forEach(index => {
+    newIndices.filter((index) => currentIndices.indexOf(index) < 0)
+      .forEach((index) => {
         // reuse one of the invalid/old elements, or create a new element
         const element = invalidElements.pop()
                         || this.createAndAddElement()
@@ -308,7 +308,7 @@ export default class CollectionView {
     this._visibleIndices = newIndices
 
     // actually remove old elements, which weren't reused
-    invalidElements.forEach(element => {
+    invalidElements.forEach((element) => {
       if (element == null) {
         return
       }
@@ -356,7 +356,7 @@ export default class CollectionView {
 
     return new Promise<void>((resolve, reject) => {
 
-      const promises: Promise<void>[] = []
+      const promises: Array<Promise<void>> = []
 
       this._elements.forEach((element, elementIndex) => {
         assert(() => elementIndex >= 0)
@@ -365,7 +365,7 @@ export default class CollectionView {
         const currentPosition = this._positions.get(element)
 
         if (!currentPosition) {
-          throw Error("missing position for element: " + element)
+          throw Error('missing position for element: ' + element)
         }
 
         if (finalPosition.equals(currentPosition)) {
@@ -400,8 +400,6 @@ export default class CollectionView {
                                    ['transform'],
                                    animationReason)
         }
-
-        // TODO: invoke onTransitionEnd right away if maxElementTransitionDuration == 0, as it won't be called otherwise?
 
         const temporaryEndPosition = improvedEndPosition !== undefined
           ? improvedEndPosition
@@ -441,11 +439,11 @@ export default class CollectionView {
 
     const properties = this.configureElementTransitionProperties(element, extraProperties)
     const animations = properties
-      .map(property =>
+      .map((property) =>
              this.getAnimation(elementIndex, property, animationReason))
-    const durations = animations.map(animation => animation.duration)
-    const delays = animations.map(animation => animation.delay)
-    const timingFunctions = animations.map(animation => animation.timingFunction)
+    const durations = animations.map((animation) => animation.duration)
+    const delays = animations.map((animation) => animation.delay)
+    const timingFunctions = animations.map((animation) => animation.timingFunction)
 
     this.configureElementTransitionDurations(element, durations)
     this.configureElementTransitionDelays(element, delays)
@@ -663,7 +661,7 @@ export default class CollectionView {
       const diffY = Math.round(newPosition.y - this._scrollPosition.y)
 
       if (diffX || diffY) {
-        this._elements.forEach(element => {
+        this._elements.forEach((element) => {
           element.style.transform += ` translate3d(${diffX}px, ${diffY}px, 0)`
         })
       }
@@ -746,7 +744,7 @@ export default class CollectionView {
     return new Promise<void>((resolve, reject) => {
       const operation = this.startOperation(reject)
 
-      const promises: Promise<void>[] = []
+      const promises: Array<Promise<void>> = []
 
       // handle legacy Object
       if (!(movedIndexMap instanceof Map)) {
@@ -763,7 +761,7 @@ export default class CollectionView {
 
       const oldMovedIndices = Array.from(movedIndexMap.keys())
       const reverseMovedIndexMap = new Map<number, number>()
-      oldMovedIndices.forEach(oldIndex => {
+      oldMovedIndices.forEach((oldIndex) => {
         // TODO: assert
         const newIndex = movedIndexMap.get(oldIndex) as number
         reverseMovedIndexMap.set(newIndex, oldIndex)
@@ -811,7 +809,7 @@ export default class CollectionView {
 
       // disappear and remove elements
 
-      removedIndices.forEach(elementIndex => {
+      removedIndices.forEach((elementIndex) => {
         assert(() => elementIndex >= 0)
 
         const element = this._elements.get(elementIndex)
@@ -833,7 +831,7 @@ export default class CollectionView {
 
         this.applyStyle(disappearedStyle, element)
 
-        promises.push(new Promise<void>(resolve => {
+        promises.push(new Promise<void>((resolve) => {
 
           // NOTE: notify delegate about invalidation after element was removed
           // (animation finished), not immediately when stopping to keep track of it
@@ -865,7 +863,7 @@ export default class CollectionView {
 
       const indices = sort(Array.from(this._elements.keys()))
 
-      indices.forEach(index => {
+      indices.forEach((index) => {
         const element = this._elements.get(index) as HTMLElement
         assert(() => index >= 0)
 
@@ -901,7 +899,7 @@ export default class CollectionView {
       let removedOrMovedLoadOffset = 0
       let addedOrMovedLoadOffset = 0
 
-      finalIndices.forEach(index => {
+      finalIndices.forEach((index) => {
 
         let oldIndex: number
         const reverseMovedIndex = reverseMovedIndexMap.get(index)
@@ -954,7 +952,6 @@ export default class CollectionView {
                                  Object.keys(appearingStyle),
                                  CollectionViewAnimationReason.ELEMENT_ADDITION)
 
-
           const appearedStyle: Style =
             Object.assign({opacity: '1'},
                           this.getStyle(layoutIndex, element,
@@ -988,9 +985,7 @@ export default class CollectionView {
                                            : undefined)
             .then(() => {
 
-
               this.updateCurrentIndices()
-
 
               resolve()
             })
@@ -1009,7 +1004,7 @@ export default class CollectionView {
 
           resolve()
         })
-        .catch(reason => {
+        .catch((reason) => {
           this.addScrollListener()
 
           reject(reason)
@@ -1030,9 +1025,10 @@ export default class CollectionView {
   }
 
   private applyStyle(style: Style, element: HTMLElement) {
-    for (let property in style) {
-      if (!style.hasOwnProperty(property))
+    for (const property in style) {
+      if (!style.hasOwnProperty(property)) {
         continue
+      }
       element.style.setProperty(property, style[property])
     }
   }
@@ -1072,11 +1068,11 @@ export default class CollectionView {
   }
 
   private configureElementTransitionDurations(element: HTMLElement, durations: number[]) {
-    element.style.transitionDuration = durations.map(duration => duration + 'ms').join(',')
+    element.style.transitionDuration = durations.map((duration) => duration + 'ms').join(',')
   }
 
   private configureElementTransitionDelays(element: HTMLElement, delays: number[]) {
-    element.style.transitionDelay = delays.map(delay => delay + 'ms').join(',')
+    element.style.transitionDelay = delays.map((delay) => delay + 'ms').join(',')
   }
 
   private configureElementTransitionTimingFunctions(element: HTMLElement, timingFunctions: string[]) {
@@ -1089,7 +1085,7 @@ export default class CollectionView {
     }
     const position = this._positions.get(element)
     if (!position) {
-      throw Error("missing position for element: " + element)
+      throw Error('missing position for element: ' + element)
     }
     const elementInfo = this.layout.getElementInfo(elementIndex)
     return this.delegate.getStyle(elementIndex, phase, elementInfo, position) || {}

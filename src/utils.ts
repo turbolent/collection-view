@@ -23,16 +23,15 @@ export function coalesce<T>(value: T | undefined | null, defaultValue: T): T {
   return value
 }
 
-
 export function assert(f: () => boolean) {
   if (process.env.NODE_ENV !== 'production') {
     if (!f()) {
-      throw new Error("")
+      throw new Error('')
     }
   }
 }
 
-export function range (min: number, max: number): number[] {
+export function range(min: number, max: number): number[] {
   return Array.from(Array(max - min),
                     (_, index) => min + index)
 }
@@ -62,6 +61,6 @@ export function intersect(line1: Line, line2: Line): Position | undefined {
   )
 }
 
-export type Style = {
+export interface Style {
   [property: string]: any
 }
