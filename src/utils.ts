@@ -32,7 +32,8 @@ export function assert(f: () => boolean) {
 }
 
 export function range(min: number, max: number): number[] {
-  return Array.from(Array(max - min),
+  const count = Math.max(0, max - min)
+  return Array.from(Array(count),
                     (_, index) => min + index)
 }
 
