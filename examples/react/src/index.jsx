@@ -3,6 +3,7 @@ import { CollectionView, GridLayout } from '../../../dist'
 import style from '../../_common/style.css'
 import * as React from "react";
 import ReactDOM from 'react-dom';
+import { diff, Deletion, Insertion, Update, Move } from 'heckel-diff-items'
 
 const initialItems = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 const changedItems = [1, 15, 16, 3, 6, 8, 4, 10, 11, 12, 13, 14]
@@ -68,7 +69,27 @@ class Content extends React.Component {
             return
         }
 
-        const [removed, added, moved] = diff(oldItems, items)
+        const ops = diff(oldItems, items)
+
+        const removed = []
+        const added = []
+        const moved = new Map()
+
+        ops.forEach((op) => {
+            if (op instanceof Deletion) {
+                removed.push(op.index)
+            } else if (op instanceof Insertion) {
+                added.push(op.index)
+            }  else if (op instanceof Move) {
+                moved.set(op.fromIndex, op.toIndex)
+            } else if (op instanceof Update) {
+                removed.push(op.index)
+                added.push(op.index)
+            }
+        })
+
+        console.log(JSON.stringify([removed, added, Array.from(moved.entries())]))
+
         this.view.changeIndices(removed, added, moved)
     }
 
@@ -141,45 +162,4 @@ class Example extends React.Component {
 
 window.onload = function () {
     ReactDOM.render(<Example />, document.body)
-}
-
-
-const identity = (x) => x
-
-function diff(original, target, keyFunction) {
-
-    keyFunction = keyFunction || identity
-
-    const removed = []
-    const added = []
-    const moved = new Map()
-
-    const originalMap = new Map()
-    original.forEach((item, index) => {
-        const key = keyFunction(item)
-        originalMap.set(key, index)
-    })
-
-    const targetMap = new Map()
-    target.forEach((item, index) => {
-        const key = keyFunction(item)
-        targetMap.set(key, index)
-
-        const originalIndex = originalMap.get(key)
-        if (originalIndex === undefined) {
-            added.push(index)
-        }
-    })
-
-    original.forEach((item, index) => {
-        const key = keyFunction(item)
-        const targetIndex = targetMap.get(key)
-        if (targetIndex === undefined) {
-            removed.push(index)
-        } else if (targetIndex !== index) {
-            moved.set(index, targetIndex)
-        }
-    })
-
-    return [removed, added, moved]
 }
