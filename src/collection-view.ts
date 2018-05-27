@@ -165,7 +165,7 @@ export default class CollectionView {
     //   localStorage['pos'] = JSON.stringify(this.scrollPosition)
     // })
 
-    this.updateCurrentIndices()
+    this.onScroll()
   }
 
   public uninstall(elementHandler?: (element: HTMLElement) => void): void {
