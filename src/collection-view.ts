@@ -945,12 +945,12 @@ export default class CollectionView {
           // tslint:disable-next-line:no-unused-expression
           window.getComputedStyle(element).opacity
 
-          // TODO: include 'transform' property?
           // TODO: include appearedStyle properties?
-          this.performTransition(layoutIndex,
-                                 element,
-                                 Object.keys(appearingStyle),
-                                 CollectionViewAnimationReason.ELEMENT_ADDITION)
+          const maxTransitionDuration =
+            this.performTransition(layoutIndex,
+                                   element,
+                                   Object.keys(appearingStyle),
+                                   CollectionViewAnimationReason.ELEMENT_ADDITION)
 
           const appearedStyle: Style =
             Object.assign({opacity: '1'},
@@ -959,7 +959,19 @@ export default class CollectionView {
 
           this.applyStyle(appearedStyle, element)
 
-          // TODO: reset transition properties/durations/delays after animation completed?
+          // reset transition properties/durations/delays after animation completed
+
+          promises.push(new Promise<void>((resolve, reject) => {
+
+            operation.addRejection(reject)
+
+            this.delayForOperation(operation, () => {
+
+              this.configureElementTransitionProperties(element)
+
+              resolve()
+            }, maxTransitionDuration)
+          }))
 
         } else {
           // NOTE: important, forces a relayout
