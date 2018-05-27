@@ -69,6 +69,7 @@ export interface ScrollOptions {
 
 export interface ChangeIndicesOptions {
   animated?: boolean,
+  delayScroll?: boolean
 }
 
 export default class CollectionView {
@@ -763,6 +764,7 @@ export default class CollectionView {
                        options: ChangeIndicesOptions = {}): Promise<void> {
 
     const animated = coalesce(options.animated, true)
+    const delayScroll = coalesce(options.delayScroll, false)
 
     return new Promise<void>((resolve, reject) => {
       const operation = this.startOperation(reject)
@@ -817,17 +819,24 @@ export default class CollectionView {
       const bottom = scrollY + containerHeight
       const adjustY = bottom > newContentHeight
 
-      if (adjustX || adjustY) {
-        this._scrollPosition =
-          new Position(adjustX
-                         ? Math.max(0, scrollX - (right - newContentWidth))
-                         : scrollX,
-                       adjustY
-                         ? Math.max(0, scrollY - (bottom - newContentHeight))
-                         : scrollY)
+      const scroll = () => {
 
-        // TODO: how to handle variable duration here?
-        this.scrollTo(this._scrollPosition, {animated})
+        if (adjustX || adjustY) {
+          this._scrollPosition =
+            new Position(adjustX
+                           ? Math.max(0, scrollX - (right - newContentWidth))
+                           : scrollX,
+                         adjustY
+                           ? Math.max(0, scrollY - (bottom - newContentHeight))
+                           : scrollY)
+
+          // TODO: how to handle variable duration here?
+          this.scrollTo(this._scrollPosition, {animated})
+        }
+      }
+
+      if (!delayScroll) {
+        scroll()
       }
 
       // disappear and remove elements
@@ -1034,6 +1043,11 @@ export default class CollectionView {
 
       Promise.all(promises)
         .then(() => {
+
+          if (delayScroll) {
+            scroll()
+          }
+
           if (countDifference < 0) {
             this.updateContentSize(this._layout)
           }
