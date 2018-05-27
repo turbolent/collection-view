@@ -81,11 +81,11 @@ export default class CollectionView {
   private _positions = new WeakMap<HTMLElement, Position>()
   private _visibleIndices: number[] = []
   private _onResize: () => void
-  private _container: HTMLElement
   private _layout: CollectionViewLayout
   private _currentOperation?: Operation
   private _defaultAnimation: Animation
 
+  readonly container: HTMLElement
   readonly content: HTMLElement
   readonly delegate: CollectionViewDelegate
 
@@ -123,8 +123,8 @@ export default class CollectionView {
     if (container === null) {
       throw new InvalidArgumentError('Content element should be contained in a container element')
     }
-    this._container = container as HTMLElement
-    this._container.classList.add(style.container)
+    this.container = container as HTMLElement
+    this.container.classList.add(style.container)
 
     this.animationDuration = coalesce(parameters.animationDuration,
                                       CollectionView.DEFAULT_ANIMATION_DURATION)
@@ -174,8 +174,8 @@ export default class CollectionView {
     this.content.classList.remove(style.content)
     this.content.removeAttribute('style')
 
-    this._container.classList.remove(style.container)
-    this._container.removeEventListener('scroll', this.onScroll, false)
+    this.container.classList.remove(style.container)
+    this.container.removeEventListener('scroll', this.onScroll, false)
 
     window.removeEventListener('resize', this._onResize, false)
 
@@ -188,8 +188,8 @@ export default class CollectionView {
   }
 
   private get currentContainerSize(): Size {
-    return new Size(this._container.clientWidth,
-                    this._container.clientHeight)
+    return new Size(this.container.clientWidth,
+                    this.container.clientHeight)
   }
 
   private updateContainerSize(layout: CollectionViewLayout): void {
@@ -213,8 +213,8 @@ export default class CollectionView {
   }
 
   private get currentScrollPosition(): Position {
-    return new Position(this._container.scrollLeft,
-                        this._container.scrollTop)
+    return new Position(this.container.scrollLeft,
+                        this.container.scrollTop)
   }
 
   private onScroll(): void {
@@ -722,8 +722,8 @@ export default class CollectionView {
       }
       requestAnimationFrame(scroll)
     } else {
-      this._container.scrollLeft = toX
-      this._container.scrollTop = toY
+      this.container.scrollLeft = toX
+      this.container.scrollTop = toY
     }
   }
 
@@ -1017,11 +1017,11 @@ export default class CollectionView {
       return
     }
 
-    this._container.addEventListener('scroll', this.onScroll, false)
+    this.container.addEventListener('scroll', this.onScroll, false)
   }
 
   private removeScrollListener() {
-    this._container.removeEventListener('scroll', this.onScroll, false)
+    this.container.removeEventListener('scroll', this.onScroll, false)
   }
 
   private applyStyle(style: Style, element: HTMLElement) {
