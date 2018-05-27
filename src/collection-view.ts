@@ -611,9 +611,10 @@ export default class CollectionView {
       .then(completion, completion)
   }
 
-  public updateLayout(newLayout: CollectionViewLayout, options?: UpdateLayoutOptions): Promise<void> {
+  public updateLayout(newLayout: CollectionViewLayout,
+                      options: UpdateLayoutOptions = {}): Promise<void> {
 
-    const animated = options ? options.animated : true
+    const animated = coalesce(options.animated, true)
 
     return new Promise<void>((resolve, reject) => {
       const operation = this.startOperation(reject)
@@ -718,9 +719,10 @@ export default class CollectionView {
     })
   }
 
-  public scrollTo({x: toX, y: toY}: Position, options?: ScrollOptions): void {
+  public scrollTo({x: toX, y: toY}: Position,
+                  options: ScrollOptions = {}): void {
 
-    const animated = options ? options.animated : true
+    const animated = coalesce(options.animated, true)
 
     if (animated) {
       const start = Date.now()
@@ -758,9 +760,9 @@ export default class CollectionView {
   public changeIndices(removedIndices: number[],
                        addedIndices: number[],
                        movedIndexMap: Map<number, number>,
-                       options?: ChangeIndicesOptions): Promise<void> {
+                       options: ChangeIndicesOptions = {}): Promise<void> {
 
-    const animated = options ? options.animated : true
+    const animated = coalesce(options.animated, true)
 
     return new Promise<void>((resolve, reject) => {
       const operation = this.startOperation(reject)
