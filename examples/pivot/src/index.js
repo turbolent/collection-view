@@ -81,7 +81,9 @@ window.onload = function () {
   button.onclick = function () {
     if (added) {
       delegate.items = []
-      view.changeIndices(indices, [], {})
+      view.changeIndices(indices, [], {}, {
+        delayScroll: true
+      })
     } else {
       delegate.items = items
       view.changeIndices([], indices, {})
