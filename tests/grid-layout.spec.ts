@@ -35,12 +35,25 @@ afterAll(async () => {
   await browser.close()
 })
 
+const collectTraces = false
+
+let testIndex = 0
+
 beforeEach(async () => {
   page = await browser.newPage()
   await page.setViewport({ width, height })
   page.once('pageerror', fail)
   const envURL = 'file://' + path.resolve(__dirname, 'env', 'index.html')
   await page.goto(envURL, {"waitUntil" : "networkidle0"})
+  if (collectTraces) {
+    await page.tracing.start({path: `trace-${testIndex++}.json`})
+  }
+})
+
+afterEach(async () => {
+  if (collectTraces) {
+    await page.tracing.stop()
+  }
 })
 
 // only used to help TypeScript in evaluate calls. see env/src/index.js
