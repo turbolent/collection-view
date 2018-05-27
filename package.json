@@ -1,6 +1,6 @@
 {
   "name": "collection-view",
-  "version": "1.0.0-beta2",
+  "version": "1.0.0-beta3",
   "license": "MIT",
   "author": "Bastian Müller <bastian@turbolent.com>",
   "description": "UICollectionView for the web",
