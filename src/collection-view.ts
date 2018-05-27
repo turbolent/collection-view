@@ -59,6 +59,18 @@ class Operation {
   }
 }
 
+export interface UpdateLayoutOptions {
+  animated?: boolean
+}
+
+export interface ScrollOptions {
+  animated?: boolean
+}
+
+export interface ChangeIndicesOptions {
+  animated?: boolean,
+}
+
 export default class CollectionView {
   private static readonly SCROLL_EASING = BezierEasing(0.25, 0.1, 0.25, 1.0)
 
@@ -599,7 +611,10 @@ export default class CollectionView {
       .then(completion, completion)
   }
 
-  public updateLayout(newLayout: CollectionViewLayout, animated: boolean = true): Promise<void> {
+  public updateLayout(newLayout: CollectionViewLayout, options?: UpdateLayoutOptions): Promise<void> {
+
+    const animated = options ? options.animated : true
+
     return new Promise<void>((resolve, reject) => {
       const operation = this.startOperation(reject)
 
@@ -703,7 +718,10 @@ export default class CollectionView {
     })
   }
 
-  public scrollTo({x: toX, y: toY}: Position, animated: boolean = false): void {
+  public scrollTo({x: toX, y: toY}: Position, options?: ScrollOptions): void {
+
+    const animated = options ? options.animated : true
+
     if (animated) {
       const start = Date.now()
       const {x: fromX, y: fromY} = this.currentScrollPosition
@@ -714,7 +732,8 @@ export default class CollectionView {
         const easedProgress = easing(progress)
         const targetX = fromX + easedProgress * (toX - fromX)
         const targetY = fromY + easedProgress * (toY - fromY)
-        this.scrollTo(new Position(targetX, targetY), false)
+        this.scrollTo(new Position(targetX, targetY),
+                      {animated: false})
 
         if (progress < 1) {
           requestAnimationFrame(scroll)
@@ -739,7 +758,9 @@ export default class CollectionView {
   public changeIndices(removedIndices: number[],
                        addedIndices: number[],
                        movedIndexMap: Map<number, number>,
-                       animated: boolean = true): Promise<void> {
+                       options?: ChangeIndicesOptions): Promise<void> {
+
+    const animated = options ? options.animated : true
 
     return new Promise<void>((resolve, reject) => {
       const operation = this.startOperation(reject)
@@ -804,7 +825,7 @@ export default class CollectionView {
                          : scrollY)
 
         // TODO: how to handle variable duration here?
-        this.scrollTo(this._scrollPosition, animated)
+        this.scrollTo(this._scrollPosition, {animated})
       }
 
       // disappear and remove elements
