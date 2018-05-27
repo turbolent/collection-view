@@ -72,7 +72,7 @@ window.onload = function () {
   })
   const view = new CollectionView(scrollElement, layout, delegate)
 
-  const items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  const items = Array.from(Array(20).keys()).map((index) => index + 1)
   const indices = items.map((_, index) => index)
 
   let added = false
