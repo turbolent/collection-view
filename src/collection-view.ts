@@ -842,7 +842,8 @@ export default class CollectionView {
                          this.delegate.invalidateElement(element, elementIndex)
                        }
 
-                       // TODO: reset transition properties/durations/delays after animation completed?
+                       // NOTE: no need to reset transition properties/durations/delays
+                       // after animation completed, as the element was removed
 
                        resolve()
                      },
@@ -985,6 +986,8 @@ export default class CollectionView {
       // reposition
 
       promises.push(new Promise<void>((resolve, reject) => {
+
+        operation.addRejection(reject)
 
         // NOTE: delay important
         this.delayForOperation(operation, () => {
