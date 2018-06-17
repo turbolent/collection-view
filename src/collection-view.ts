@@ -170,14 +170,6 @@ export default class CollectionView {
 
     window.addEventListener('resize', this._onResize, false)
 
-    // DEBUG: keep scroll position
-    // let savedPos = localStorage['pos']
-    // if (savedPos)
-    //   this.scrollTo(JSON.parse(savedPos))
-    // window.addEventListener("beforeunload", () => {
-    //   localStorage['pos'] = JSON.stringify(this.scrollPosition)
-    // })
-
     this.onScroll()
   }
 
@@ -685,7 +677,7 @@ export default class CollectionView {
 
       this.updateContentSize(newLayout)
 
-      this.scrollTo(newPosition)
+      this._scrollTo(newPosition.x, newPosition.y)
 
       this._scrollPosition = finalPosition
 
@@ -726,27 +718,34 @@ export default class CollectionView {
     const animated = coalesce(options.animated, true)
 
     if (animated) {
-      const start = Date.now()
-      const {x: fromX, y: fromY} = this.currentScrollPosition
-      const easing = CollectionView.SCROLL_EASING
-      const scroll = () => {
-        const now = Date.now()
-        const progress = Math.min(1, (now - start) / this.animationDuration)
-        const easedProgress = easing(progress)
-        const targetX = fromX + easedProgress * (toX - fromX)
-        const targetY = fromY + easedProgress * (toY - fromY)
-        this.scrollTo(new Position(targetX, targetY),
-                      {animated: false})
-
-        if (progress < 1) {
-          requestAnimationFrame(scroll)
-        }
-      }
-      requestAnimationFrame(scroll)
+      this._scrollToAnimated(toX, toY)
     } else {
-      this.container.scrollLeft = toX
-      this.container.scrollTop = toY
+      this._scrollTo(toX, toY)
     }
+  }
+
+  private _scrollTo(x: number, y: number): void {
+    this.container.scrollLeft = x
+    this.container.scrollTop = y
+  }
+
+  private _scrollToAnimated(toX: number, toY: number): void {
+    const start = Date.now()
+    const {x: fromX, y: fromY} = this.currentScrollPosition
+    const easing = CollectionView.SCROLL_EASING
+    const scroll = () => {
+      const now = Date.now()
+      const progress = Math.min(1, (now - start) / this.animationDuration)
+      const easedProgress = easing(progress)
+      const targetX = fromX + easedProgress * (toX - fromX)
+      const targetY = fromY + easedProgress * (toY - fromY)
+      this._scrollTo(targetX, targetY)
+
+      if (progress < 1) {
+        requestAnimationFrame(scroll)
+      }
+    }
+    requestAnimationFrame(scroll)
   }
 
   private removeFromParent(element: HTMLElement): void {
