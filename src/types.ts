@@ -171,10 +171,9 @@ export class Animation {
               readonly timingFunction?: string) {}
 }
 
-export type Purify<T extends string> = { [P in T]: T; }[T]
-
 export type NonNullable<T> = T & {}
 
-export type Required<T> = {
-  [P in Purify<keyof T>]: NonNullable<T[P]>
-}
+export type Required<T> =
+  T extends object
+    ? { [P in keyof T]-?: NonNullable<T[P]>; }
+    : T

@@ -14,7 +14,7 @@
     "noImplicitThis": true,
     "noEmitOnError": true,
     "declaration": true,
-    "declarationDir": "declarations",
+    "declarationDir": "./dist/declarations",
     "noResolve": false,
     "noUnusedLocals": true,
     "forceConsistentCasingInFileNames": true
