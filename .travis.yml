@@ -7,9 +7,9 @@ branches:
   only:
     - master
 
-script: yarn buildProduction && yarn test -- --runInBand
+script: npm run buildProduction && npm run test -- --runInBand
 
 cache:
   directories:
     - "node_modules"
-  yarn: true
+  npm: true
