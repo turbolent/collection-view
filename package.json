@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "bezier-easing": "2.1.0",
-    "lodash-es": "4.17.14"
+    "lodash-es": "4.17.21"
   },
   "devDependencies": {
     "@types/bezier-easing": "2.0.0",
