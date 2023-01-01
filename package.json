@@ -35,16 +35,16 @@
     "@types/jest": "23.3.9",
     "@types/lodash-es": "4.17.1",
     "@types/puppeteer": "1.10.0",
-    "css-loader": "1.0.1",
+    "css-loader": "6.7.3",
     "jest": "^25.2.7",
     "puppeteer": "^2.1.1",
-    "style-loader": "0.23.1",
-    "ts-loader": "5.3.0",
+    "style-loader": "3.3.1",
+    "ts-loader": "9.4.2",
     "tslint": "5.11.0",
     "typescript": "3.1.6",
     "terser-webpack-plugin": "2.3.5",
-    "webpack": "4.26.0",
-    "webpack-cli": "3.1.2"
+    "webpack": "5.75.0",
+    "webpack-cli": "5.0.1"
   },
   "jest": {
     "moduleFileExtensions": [
